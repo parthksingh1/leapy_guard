@@ -1,0 +1,56 @@
+# Template: copy into your own repository as .github/workflows/leaply-guard.yml
+# Weekly scan; opens a pull request for reachable HIGH/CRITICAL findings.
+# Secrets needed: NEBIUS_API_KEY, TAVILY_API_KEY (optional). GITHUB_TOKEN is provided by Actions.
+name: Leaply Guard
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Leaply Guard
+        run: pip install "leaply-guard @ git+https://github.com/YOUR_USER/leaply-guard" uv
+      - name: Scan and triage
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: |
+          leaply-guard scan --repo . --json > findings.json
+          python - <<'PY'
+          import json, os
+          f = json.load(open("findings.json"))
+          todo = [x["package"]["name"] for x in f
+                  if x["severity"] in ("HIGH", "CRITICAL") and x["reachability"]["verdict"] == "REACHABLE"]
+          print("reachable HIGH/CRITICAL:", todo)
+          open(os.environ["GITHUB_ENV"], "a").write(f"LEAPLY_PACKAGES={' '.join(todo)}\n")
+          PY
+      - name: Fix and open pull requests
+        if: env.LEAPLY_PACKAGES != ''
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "Leaply Guard"
+          git config user.email "leaply-guard@users.noreply.github.com"
+          for pkg in $LEAPLY_PACKAGES; do
+            git checkout -q "${{ github.ref_name }}"
+            leaply-guard run --repo . --package "$pkg" --pr || echo "::warning::$pkg needs human review"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: leaply-guard-reports
+          path: runs/

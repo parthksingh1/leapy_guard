@@ -64,6 +64,11 @@ def resolve_repo(spec: str, bus: EventBus) -> tuple[Path, str | None]:
     path = Path(spec).expanduser().resolve()
     if not path.is_dir():
         raise FileNotFoundError(f"repository not found: {spec}")
+    # a local checkout of a GitHub repo (e.g. inside GitHub Actions) can still get a pull request
+    origin = subprocess.run(["git", "remote", "get-url", "origin"], cwd=path, capture_output=True, text=True)
+    om = re.match(r"^(?:https?://(?:[^@/]+@)?github\.com/|git@github\.com:)([\w.-]+/[\w.-]+?)(?:\.git)?/?$", origin.stdout.strip())
+    if origin.returncode == 0 and om and (path / ".git").exists():
+        return path, om.group(1)
     return path, None
 
 

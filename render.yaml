@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: leaply-guard
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: LEAPLY_HOSTED
+        value: "1"
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: LIVE_RUNS_PER_HOUR
+        value: "3"
+      - key: LIVE_RUNS_PER_DAY
+        value: "40"

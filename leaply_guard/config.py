@@ -7,7 +7,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parent.parent
+_SRC = Path(__file__).resolve().parent.parent
+# source checkout: the repo root; installed package (Docker, GitHub Actions): the working directory
+ROOT = Path(os.environ.get("LEAPLY_HOME") or (_SRC if (_SRC / "pyproject.toml").exists() else Path.cwd()))
 load_dotenv(ROOT / ".env")
 
 

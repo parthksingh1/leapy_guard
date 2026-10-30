@@ -44,7 +44,7 @@ def find_usages(repo: Path, finding: Finding, limit: int = 60) -> list[dict]:
 
 def triage(repo: Path, finding: Finding, llm: LLM | None, step: str = "triage") -> dict:
     usages = find_usages(repo, finding)
-    prod = [u for u in usages if not u["test"]]
+    prod = sorted((u for u in usages if not u["test"]), key=lambda u: (u["kind"] != "call", "decode" not in u["code"]))
     if not usages:
         result = {"verdict": "NOT USED", "evidence": [], "reasoning": f"No import of {finding.package.name} found in source files.", "by": "static"}
     elif llm is None:
