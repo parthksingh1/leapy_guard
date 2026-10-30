@@ -2,7 +2,7 @@ services:
   - type: web
     name: leaply-guard
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /healthz
     envVars:
       - key: LEAPLY_HOSTED

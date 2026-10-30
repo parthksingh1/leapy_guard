@@ -19,7 +19,7 @@ The Docker image serves the web UI in **hosted mode** (`LEAPLY_HOSTED=1`):
 5. Click **Apply**. The first build takes 3–5 minutes (it pre-warms the demo packages).
 6. When the service shows **Live**, open the `https://leaply-guard-xxxx.onrender.com` URL. You should land on the recorded run. Check `/healthz` returns `{"ok": true}`.
 
-Plan: `render.yaml` uses **starter** (always on, enough RAM for the test sandboxes). To use **free**, change `plan: starter` to `plan: free`; it sleeps after 15 idle minutes (the first visit then takes about 50 s).
+Plan: `render.yaml` uses **free** (no card needed). It sleeps after 15 idle minutes, so the first visit then takes about 50 s. For always-on, change `plan: free` to `plan: starter`.
 
 ## Option B: Hugging Face Spaces (≈ 8 minutes)
 
