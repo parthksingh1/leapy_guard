@@ -26,10 +26,10 @@ Bump PRs that only change a version are easy. The ones that sit open are the **b
 8. **Plan (Nemotron 3 Ultra).** The whole repository (1M-token context), the failing output and the research go into one call that returns a JSON plan: files, exact changes, why, risk.
 9. **Edit (Nemotron 3 Super).** Applies the plan file by file as unified diffs. Hunks are located by content, so wrong line numbers do not break them. If a diff does not apply, Super returns the full file instead.
 10. **Verify + fix loop (Nano triage, Super fixes).** Runs the tests. On failure, Nano classifies the error and picks the files, Super patches them, and the tests run again. Max 6 iterations. If the same error repeats 3 times, the run stops and hands over to a human with a list of what it tried.
-11. **Adversarial security review (Nemotron 3 Ultra).** A critic agent reviews the final diff for weakened checks, unsafe loaders, broad allow-lists, swallowed exceptions or unrelated changes. A high-severity concern blocks the "success" state and lowers confidence by 30.
-12. **Re-scan.** OSV (and `pip-audit -f json` if installed) on the new version: "0 known vulnerabilities for PyJWT 2.15.1".
-13. **Explain (Nemotron 3 Nano).** One plain-English line per changed file plus a reviewer summary: what changed, risk, what to double-check.
-15. **Deliver.** Markdown report, `changes.patch` (with the security test as a new regression test), SARIF 2.1.0, a confidence score, and either a **real GitHub pull request** (if `GITHUB_TOKEN` is set) or the PR body in `report.md`. Optionally, a local git branch with a commit. Nothing is auto-merged.
+11. **Re-scan.** OSV (and `pip-audit -f json` if installed) on the new version: "0 known vulnerabilities for PyJWT 2.15.1".
+12. **Explain (Nemotron 3 Nano).** One plain-English line per changed file plus a reviewer summary: what changed, risk, what to double-check.
+13. **Adversarial security review (Nemotron 3 Ultra).** A critic agent reviews the final diff for weakened checks, unsafe loaders, broad allow-lists, swallowed exceptions or unrelated changes. A high-severity concern blocks the "success" state and lowers confidence by 30.
+14. **Deliver.** Markdown report, `changes.patch` (with the security test as a new regression test), SARIF 2.1.0, a confidence score, and either a **real GitHub pull request** (if `GITHUB_TOKEN` is set) or the PR body in `report.md`. Optionally, a local git branch with a commit. Nothing is auto-merged.
 
 ## Architecture
 
