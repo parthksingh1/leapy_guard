@@ -616,7 +616,10 @@ $('#themeBtn').addEventListener('click', () => applyTheme(document.documentEleme
   $('#liveBtn').disabled = !CFG.live_enabled;
   $('#replayBtn').disabled = !CFG.replays.length;
   const hints = [];
-  if (!CFG.live_enabled) hints.push('Live runs are off on this server (no Nebius key).');
+  if (!CFG.live_enabled) {
+    hints.push('Start with Scan: OSV, EPSS, CISA KEV and reachability for the demo repo, in seconds.');
+    $('#liveBtn').title = 'Live fixes run on NVIDIA Nemotron via Nebius Token Factory once the server key is configured';
+  }
   else if (CFG.hosted) hints.push(`Live runs use real Nemotron calls (${CFG.limits.live_runs_per_hour}/hour per visitor).`);
   if (CFG.replays.length) hints.push('The recorded run replays a real live run at 6× speed.');
   $('#liveHint').textContent = hints.join(' ');

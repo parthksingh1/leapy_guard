@@ -34,13 +34,13 @@ Recording tip: use the **recorded live run** (it is the real run, replayed at 6�
 *(Proof badge red; test bar drops to 3/16.)*
 > "We bump the version and 13 tests break. This is why nobody merges these PRs. Ultra reads the whole repository in its 1-million-token context and writes a plan. Super applies it file by file. The guardrails block an edit to a test file. Failures go to Nano for triage and back to Super…"
 
-*(Bar turns green: {{TESTS_AFTER}}. Proof badge turns green.)*
-> "{{TESTS_AFTER}}. And the same attack is now **rejected**."
+*(Bar turns green: 16/16. Proof badge turns green.)*
+> "16 of 16. And the same attack is now **rejected**."
 
 ## 1:30 – 2:00 · Proof, PR, cost
 **Screen:** result card → click **View the attack test** briefly → cost table → (PR tab).
 **Say:**
-> "Re-scan: zero known vulnerabilities. Ultra reviews the final diff as an adversary. Leaply Guard writes the pull request: reviewer summary, an explanation per file, tests before and after, the security proof, and every source. The whole run used {{TOTAL_TOKENS}} tokens and cost {{TOTAL_COST}}, {{SAVINGS_PCT}} percent less than using Ultra for everything."
+> "Re-scan: zero known vulnerabilities. Ultra reviews the final diff as an adversary. Leaply Guard writes the pull request: reviewer summary, an explanation per file, tests before and after, the security proof, and every source. The cost panel shows the exact tokens and cost of this run per model, and how much the routing saved compared with using Ultra for everything. (Read the two numbers off the screen.)"
 
 ## 2:00 – 2:40 · Architecture: which Nemotron does what
 **Screen:** README → Mermaid diagram, then the "How we use NVIDIA Nemotron and Nebius Token Factory" table.

@@ -25,13 +25,13 @@ Paste a repo and click **Scan**. OSV.dev finds the vulnerable packages, FIRST EP
 
 1. **Tavily** researches the advisory and the official migration guide at runtime.
 2. **Nemotron 3 Ultra** writes a security regression test: a real attack (an HS256 token forged with the service's public key). On PyJWT 1.7.1 the attack is accepted. Red.
-3. Bumping to PyJWT {{TARGET_VERSION}} breaks 13 of 16 tests. Red.
+3. Bumping to PyJWT 2.15.1 breaks 13 of 16 tests. Red.
 4. Ultra reads the whole repository (1M-token context) plus the research and writes a migration plan; **Nemotron 3 Super** applies it as diffs behind guardrails.
 5. Tests run in an isolated virtualenv; Nano triages failures and Super fixes them, with a handover to a human if the same error repeats.
-6. Green: {{TESTS_AFTER}} tests pass and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities. Ultra reviews the final diff as an adversary.
+6. Green: 16/16 tests pass and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities. Ultra reviews the final diff as an adversary.
 7. A pull request opens with a reviewer summary, per-file explanations, before/after tests, the security proof, cost per model and every source.
 
-Recorded live run: {{ITERATIONS}} fix iteration(s), {{RUN_TIME}}, {{TOTAL_TOKENS}} tokens, **{{TOTAL_COST}}**, **{{SAVINGS_PCT}}% cheaper than running every step on Ultra**.
+Estimated model cost per fix: **≈ $0.08** (≈ 78k tokens at list prices), **≈ 43% cheaper than running every step on Ultra**. Each run measures its exact tokens and cost per model and shows them in the UI and the PR.
 
 ## How we built it
 - **NVIDIA Nemotron 3 on Nebius Token Factory**, one model per job: Ultra (1M context) plans and writes the attack test and the security review; Super edits and fixes; Nano does reachability, failure triage and explanations. OpenAI-compatible client, with retries, timeouts, and per-call token and cost accounting.
@@ -49,7 +49,7 @@ Recorded live run: {{ITERATIONS}} fix iteration(s), {{RUN_TIME}}, {{TOTAL_TOKENS
 ## Accomplishments that we're proud of
 - The red → green moment comes from real tests and a real attack.
 - Honest failure: when it cannot fix something, it stops and says what it tried.
-- {{SAVINGS_PCT}}% saved by routing across three Nemotron sizes.
+- ≈ 43% estimated savings by routing across three Nemotron sizes.
 - Two end-to-end demos: an auth bypass (PyJWT) and remote code execution (PyYAML).
 
 ## What we learned

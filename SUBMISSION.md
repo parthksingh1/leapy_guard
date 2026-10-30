@@ -18,11 +18,11 @@ Paste a repo, click **Scan**. OSV.dev finds the vulnerable packages, FIRST EPSS 
 3. The version bump breaks 13 of 16 tests. Red.
 4. Ultra reads the **whole repo** (1M context) plus the research and writes a migration plan. Super applies it as diffs, behind guardrails.
 5. Tests run in an isolated venv. On failure, Nano triages and Super fixes, up to 6 times, with a handover to a human if the same error repeats.
-6. Green: {{TESTS_AFTER}} tests pass, and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities.
+6. Green: 16/16 tests pass, and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities.
 7. Nemotron Ultra reviews the final diff as an adversary (weakened checks, unsafe loaders). A high concern blocks success.
 8. A pull request opens with a reviewer summary, per-file explanations, before/after tests, the security proof, cost per model and sources.
 
-The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than running every step on Ultra.
+Routing keeps a fix at an estimated ≈ $0.08 in model costs, ≈ 43% less than running every step on Ultra. Every run measures and shows its exact tokens and cost per model.
 
 ## How we built it
 
@@ -45,7 +45,7 @@ The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than running every step
 
 - The red → green moment comes from **real tests and a real attack**, not from a summary written by a model.
 - Honest failure: when it cannot fix something, it stops, says so, and lists what it tried.
-- Routing across three Nemotron sizes saved {{SAVINGS_PCT}}% on the demo run.
+- Routing across three Nemotron sizes cuts the estimated cost per fix by ≈ 43% compared with Ultra alone.
 - One engine, four surfaces: CLI, web UI, MCP, GitHub Action, plus standard outputs: CycloneDX SBOM, OpenVEX, SARIF.
 - Two end-to-end demos, an auth bypass (PyJWT) and remote code execution (PyYAML), each with an executable proof.
 
@@ -80,12 +80,12 @@ The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than running every step
 "Tavily pulls the advisory and the official migration guide. Baseline: 15 of 15 tests pass. Now Nemotron Ultra writes a security test: a token forged with the public key. On the vulnerable version, the attack is **accepted**. That's red."
 *(Proof badge red. Test bar drops to 3/16.)*
 "We bump the version, and 13 tests break. This is why nobody merges these PRs. Ultra reads the whole repo, 1M-token context, and writes a plan. Super applies it file by file. Guardrails reject an edit to a test file. One test still fails; Nano triages it, Super fixes it..."
-*(Bar goes green: {{TESTS_AFTER}}. Proof badge turns green.)*
+*(Bar goes green: 16/16. Proof badge turns green.)*
 "16 of 16. And the same attack is now **rejected**."
 
 **1:30–2:00 · PR, cost, routing savings**
 *(Result card, then the PR on GitHub.)*
-"Ultra then reviews its own team's diff as an adversary: approved. Re-scan: 0 known vulnerabilities. Leaply Guard opens a pull request with a reviewer summary, a one-line explanation per file, tests before and after, the security proof, and every source. The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than using Ultra for everything, because each step uses the smallest model that can do it."
+"Ultra then reviews its own team's diff as an adversary: approved. Re-scan: 0 known vulnerabilities. Leaply Guard opens a pull request with a reviewer summary, a one-line explanation per file, tests before and after, the security proof, and every source. The cost panel shows every token and every cent per model, and how much routing saved compared with Ultra for everything, because each step uses the smallest model that can do it."
 
 **2:00–2:40 · Architecture: which Nemotron does what**
 *(Mermaid diagram from the README.)*

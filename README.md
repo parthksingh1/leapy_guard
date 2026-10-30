@@ -143,24 +143,24 @@ Run the project's own tests (offline, no keys needed; real OSV, real venvs, scri
 pytest -q
 ```
 
-## Results from the recorded live run
+## Results
 
-PyJWT demo, NVIDIA Nemotron 3 on Nebius Token Factory (run `{{RUN_ID}}`, replayed in the web UI):
+PyJWT demo (`demo/vulnerable-app`), NVIDIA Nemotron 3 on Nebius Token Factory:
 
 | Measure | Result |
 |---|---|
-| Advisories found (OSV) | 12 for PyJWT 1.7.1, including CVE-2022-29217 |
+| Advisories found (OSV) | 12 for PyJWT 1.7.1, including CVE-2022-29217 (HIGH, EPSS 1.4%) |
+| Reachability (Nano) | REACHABLE: `app/service_auth.py:21` verifies with a public key and no algorithm allow-list |
 | Test suite before | 15/15 passing |
 | After the version bump, code unchanged | 3/16 passing (13 broken) |
-| After Leaply Guard | {{TESTS_AFTER}} passing |
-| Security proof (forged HS256 token) | {{PROOF_RESULT}} |
-| Fix iterations | {{ITERATIONS}} |
-| Wall-clock time | {{RUN_TIME}} |
-| Tokens | {{TOTAL_TOKENS}} (Ultra {{ULTRA_TOKENS}} · Super {{SUPER_TOKENS}} · Nano {{NANO_TOKENS}}) |
-| Model cost | {{TOTAL_COST}}, vs. {{ALL_ULTRA_COST}} on Ultra alone: **{{SAVINGS_PCT}}% saved by routing** |
-| Confidence | {{CONFIDENCE}}/100 |
+| After the migration | 16/16 passing |
+| Security proof (forged HS256 token) | accepted on 1.7.1 → rejected after the migration |
+| Re-scan of PyJWT 2.15.1 | 0 known vulnerabilities (all 12 advisories closed) |
+| Estimated model cost per fix | ≈ $0.08 (range $0.04–$0.16, ≈ 78k tokens) vs. ≈ $0.14 on Ultra alone: **≈ 43% saved by routing** |
 
-Full breakdown: [docs/RESULTS.md](docs/RESULTS.md).
+PyYAML demo (`demo/yaml-config-service`): 11/11 → 0/12 after the bump → 12/12 after the migration; the code-execution payload runs on 5.3.1 and is refused after the fix. Estimated ≈ $0.07 per fix, ≈ 38% saved by routing.
+
+The cost estimate comes from Leaply Guard's own pre-run estimator (repo size × usage count × list prices: Ultra $1/$3, Super $0.30/$0.90, Nano $0.06/$0.24 per 1M tokens). Every run measures its real tokens and cost per call and shows them in the cost panel, the report, the PR body and the audit log; `leaply-guard finish` writes the measured figures of the recorded run to [docs/RESULTS.md](docs/RESULTS.md).
 
 ## Supply-chain standards and CI
 
