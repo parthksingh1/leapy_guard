@@ -178,7 +178,7 @@ def scan_repo(repo: Path, timeout: float = 30) -> tuple[list[Dependency], list[F
     if not deps:
         return deps, []
     findings: list[Finding] = []
-    with httpx.Client(timeout=timeout, headers={"User-Agent": "leaply-guard"}) as client:
+    with httpx.Client(timeout=timeout, headers={"User-Agent": "leaply-guard"}, transport=httpx.HTTPTransport(retries=3)) as client:
         for dep, ids in zip(deps, query_osv(deps, client)):
             if not ids:
                 continue
@@ -217,6 +217,6 @@ def scan_repo(repo: Path, timeout: float = 30) -> tuple[list[Dependency], list[F
 
 def vulns_for(name: str, version: str, ecosystem: str = "PyPI", timeout: float = 30) -> list[str]:
     """Ids still reported by OSV for an exact version (used to prove the fix closed the advisory)."""
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=timeout, transport=httpx.HTTPTransport(retries=3)) as client:
         ids = query_osv([Dependency(name, version, ecosystem, "", 0)], client)[0]
     return ids
