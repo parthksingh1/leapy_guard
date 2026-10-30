@@ -66,5 +66,4 @@ def test_env_example_has_no_real_keys():
         if "=" in line and not line.startswith("#"):
             name, value = line.split("=", 1)
             assert value == "" or value.startswith("your-"), f"{name} in .env.example must be a placeholder"
-    assert not scan_secrets("
-".join("+" + l for l in text.splitlines()))
+    assert not scan_secrets("\n".join("+" + l for l in text.splitlines()))
