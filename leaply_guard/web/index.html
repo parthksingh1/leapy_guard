@@ -618,10 +618,10 @@ async function startLive(pkg) {
     reset('live');
     const es = new EventSource(`/api/runs/${j.run_id}/events`);
     es.onmessage = (m) => { try { handle(JSON.parse(m.data)); } catch (err) { console.error(err); } };
-    es.addEventListener('end', () => { es.close(); $('#liveBtn').disabled = !CFG.live_enabled; });
+    es.addEventListener('end', () => { es.close(); $('#liveBtn').disabled = false; });
     es.onerror = () => { if (S.done) es.close(); };
   } catch (err) {
-    alert(err.message); $('#liveBtn').disabled = !CFG.live_enabled;
+    alert(err.message); $('#liveBtn').disabled = false;
   }
 }
 
@@ -646,7 +646,7 @@ async function startReplay(name, speedArg, url) {
   }
 }
 
-$('#liveBtn').addEventListener('click', () => startLive(null));
+$('#liveBtn').addEventListener('click', () => (CFG.live_enabled ? startLive(null) : $('#scanBtn').click()));
 $('#replayBtn').addEventListener('click', () => {
   const r = CFG.replays.find((x) => x.name === $('#preset').value) || CFG.replays[0];
   if (r) startReplay(r.name);
@@ -674,8 +674,9 @@ $('#themeBtn').addEventListener('click', () => applyTheme(document.documentEleme
   $('#preset').innerHTML = CFG.presets.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('');
   if (CFG.hosted) { $('#repo').disabled = true; $('#repo').placeholder = 'Hosted demo: bundled demo repo only'; }
   renderLimits(CFG.limits);
-  $('#liveBtn').disabled = !CFG.live_enabled;
-  $('#replayBtn').disabled = !CFG.replays.length;
+  $('#liveBtn').disabled = false;
+  if (!CFG.live_enabled) $('#liveBtn').innerHTML = '▶&nbsp; Run demo scan';
+  $('#replayBtn').hidden = !CFG.replays.length;
   const hints = [];
   if (!CFG.live_enabled) {
     hints.push('Start with Scan: OSV, EPSS, CISA KEV and reachability for the demo repo, in seconds.');
