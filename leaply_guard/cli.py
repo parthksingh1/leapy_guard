@@ -132,7 +132,7 @@ def cmd_run(args) -> int:
 def cmd_save_replay(args) -> int:
     src = settings.runs_dir / f"{args.run_id}.json"
     data = json.loads(src.read_text(encoding="utf-8"))
-    if data.get("status") != "success":
+    if data.get("status") != "success" or data.get("simulated"):
         print("only successful live runs can be saved as replays", file=sys.stderr)
         return 1
     settings.replays_dir.mkdir(exist_ok=True)

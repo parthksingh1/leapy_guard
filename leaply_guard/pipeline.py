@@ -179,7 +179,8 @@ class Pipeline:
                 "files_changed": list(self.files_changed),
             })
             self.bus.emit("finished", step="run", status=self.result.status, result=_public(data))
-            self.bus.save(self.cfg.runs_dir / f"{self.run_id}.json", {"result": data, "status": self.result.status})
+            self.bus.save(self.cfg.runs_dir / f"{self.run_id}.json",
+                          {"result": data, "status": self.result.status, "simulated": self.llm.simulated})
             if self.ws and not self.opts.keep_workspace:
                 self.ws.cleanup()
         return self.result

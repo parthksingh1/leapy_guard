@@ -17,6 +17,7 @@ from .events import EventBus
 from .pipeline import Pipeline, RunOptions, _new_run_id
 
 WEB = Path(__file__).parent / "web"
+DEV = os.environ.get("LEAPLY_DEV") == "1"
 REPLAYS = Path(os.environ.get("LEAPLY_REPLAYS_DIR", settings.replays_dir))
 PRESETS = {
     "pyjwt-demo": {"label": "Acme auth service · PyJWT 1.7.1 (CVE-2022-29217)", "repo": str(settings.demo_repo), "package": "PyJWT"},
@@ -72,6 +73,8 @@ def config():
         for p in sorted(REPLAYS.glob("*.json")):
             try:
                 meta = json.loads(p.read_text(encoding="utf-8"))
+                if meta.get("simulated") and not DEV:
+                    continue  # scripted test runs are never presented as recorded live runs
                 replays.append({"name": p.stem, "saved_at": meta.get("saved_at"), "status": meta.get("status"),
                                 "events": len(meta.get("events", []))})
             except (json.JSONDecodeError, OSError):
@@ -174,6 +177,8 @@ async def events(run_id: str, request: Request):
 def replay(name: str):
     path = (REPLAYS / f"{name}.json").resolve()
     if path.parent != REPLAYS.resolve() or not path.exists():
+        raise HTTPException(404, "replay not found")
+    if json.loads(path.read_text(encoding="utf-8")).get("simulated") and not DEV:
         raise HTTPException(404, "replay not found")
     return FileResponse(path, media_type="application/json")
 
