@@ -87,5 +87,6 @@ Reply with JSON only:
                       "reasoning": f"Model triage failed ({exc}); static match only.", "by": "static"}
     result["usage_count"] = len(usages)
     finding.reachability = result
-    finding.score = round(SEVERITY_RANK.get(finding.severity, 0) * REACH_WEIGHT[result["verdict"]], 2)
+    from .intel import priority
+    finding.score = priority(SEVERITY_RANK.get(finding.severity, 0), REACH_WEIGHT[result["verdict"]], finding.epss, finding.kev)
     return result

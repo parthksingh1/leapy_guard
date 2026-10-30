@@ -80,17 +80,48 @@ def cmd_scan(args) -> int:
     for f in findings:
         triage(repo, f, llm)
     findings.sort(key=lambda f: -f.score)
+    from dataclasses import asdict
+
+    from .exports import cyclonedx, openvex
+
+    fd = [f.to_dict() for f in findings]
+    if args.sbom:
+        Path(args.sbom).write_text(json.dumps(cyclonedx([asdict(d) for d in deps], fd, repo.name), indent=1), encoding="utf-8")
+    if args.vex:
+        Path(args.vex).write_text(json.dumps(openvex(fd), indent=1), encoding="utf-8")
     if args.json:
-        print(json.dumps([f.to_dict() for f in findings], indent=1))
+        print(json.dumps(fd, indent=1))
+    else:
+        print(f"{len(deps)} pinned dependencies, {len(findings)} vulnerable\n")
+        for f in findings:
+            r = f.reachability
+            print(f"{f.package.name} {f.package.version} [{f.severity}] {r['verdict']} · EPSS {f.epss:.1%}{' · CISA KEV' if f.kev else ''} "
+                  f"(priority {f.score}) → fixed in {f.fixed_version}, latest {f.latest_version}")
+            for a in f.advisories:
+                intel = f"EPSS {a.epss:.1%}" if a.epss is not None else ""
+                print(f"   {a.id:22} {a.cve or '':18} {a.severity:9} {intel:11}{' KEV' if a.kev else ''} {a.summary[:60]}")
+            for e in r.get("evidence", [])[:4]:
+                print(f"   evidence {e['file']}:{e['line']} {e.get('why', '')[:80]}")
+        if args.sbom or args.vex:
+            print("\nwrote " + ", ".join(p for p in (args.sbom, args.vex) if p))
+    return _gate(findings, args.fail_on)
+
+
+SEV = {"low": 1, "moderate": 2, "medium": 2, "high": 3, "critical": 4}
+
+
+def _gate(findings, fail_on: str | None) -> int:
+    """CI policy, e.g. --fail-on reachable-high: exit 1 if a REACHABLE finding is HIGH or worse (CISA KEV always counts)."""
+    if not fail_on:
         return 0
-    print(f"{len(deps)} pinned dependencies, {len(findings)} vulnerable\n")
+    reachable_only = fail_on.startswith("reachable-")
+    level = SEV.get(fail_on.split("-")[-1], 3)
     for f in findings:
-        r = f.reachability
-        print(f"{f.package.name} {f.package.version} [{f.severity}] {r['verdict']} (score {f.score}) → fixed in {f.fixed_version}, latest {f.latest_version}")
-        for a in f.advisories:
-            print(f"   {a.id:22} {a.cve or '':18} {a.severity:9} {a.summary[:70]}")
-        for e in r.get("evidence", [])[:4]:
-            print(f"   evidence {e['file']}:{e['line']} {e.get('why', '')[:80]}")
+        if reachable_only and f.reachability.get("verdict") != "REACHABLE":
+            continue
+        if f.kev or SEV.get(f.severity.lower(), 0) >= level:
+            print(f"policy {fail_on}: {f.package.name} {f.package.version} fails the gate", file=sys.stderr)
+            return 1
     return 0
 
 
@@ -171,6 +202,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("scan", help="scan a repo for vulnerable dependencies and triage reachability")
     s.add_argument("--repo", default=str(settings.demo_repo))
     s.add_argument("--json", action="store_true")
+    s.add_argument("--sbom", metavar="FILE", help="write a CycloneDX 1.5 SBOM with vulnerabilities")
+    s.add_argument("--vex", metavar="FILE", help="write OpenVEX statements from reachability triage")
+    s.add_argument("--fail-on", metavar="POLICY", help="CI gate: high | critical | reachable-high | reachable-critical")
     s.set_defaults(fn=cmd_scan)
 
     r = sub.add_parser("run", help="upgrade a vulnerable package and prove it with tests")

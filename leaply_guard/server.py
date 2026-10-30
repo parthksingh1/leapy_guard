@@ -112,7 +112,16 @@ async def scan(req: Request):
         for f in findings:
             triage(path, f, llm)
         findings.sort(key=lambda f: -f.score)
-        return {"dependencies": len(deps), "findings": [f.to_dict() for f in findings],
+        from dataclasses import asdict
+
+        from .agents import estimate_cost
+        from .exports import cyclonedx, openvex
+
+        fd = [f.to_dict() for f in findings]
+        for d, f in zip(fd, findings):
+            d["estimate"] = estimate_cost(path, f, settings.models, settings.max_repo_chars)
+        return {"dependencies": len(deps), "findings": fd,
+                "sbom": cyclonedx([asdict(x) for x in deps], fd, path.name), "vex": openvex(fd),
                 "cost": llm.ledger.summary(settings.models) if llm else None}
 
     try:
@@ -188,6 +197,8 @@ def run_file(run_id: str):
     path = (settings.runs_dir / f"{run_id}.json").resolve()
     if path.parent != settings.runs_dir.resolve() or not path.exists():
         raise HTTPException(404, "run not found (still running?)")
+    if json.loads(path.read_text(encoding="utf-8")).get("simulated") and not DEV:
+        raise HTTPException(404, "run not found")
     return FileResponse(path, media_type="application/json")
 
 

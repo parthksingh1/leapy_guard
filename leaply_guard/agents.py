@@ -193,3 +193,21 @@ Reply with JSON only:
   "reviewer_summary": {{"what_changed": "2 sentences", "risk": "low|medium|high", "double_check": ["specific things a human should verify"]}}}}"""
     return llm.chat_json("nano", "explain changes", [{"role": "user", "content": prompt}], step=step,
                          max_tokens=2048, temperature=0.1)
+
+
+def estimate_cost(repo: Path, finding: Finding, models: dict, max_chars: int = 1_500_000) -> dict:
+    """Rough pre-run estimate (shown as an estimate, never as a result): tokens per role from repo size and usage count."""
+    repo_tok = len(repo_snapshot(repo, max_chars)) // 4
+    files = {u["file"] for u in (finding.reachability.get("evidence") or [])} or {"x"}
+    n_files = max(len(files), (finding.reachability.get("usage_count") or 2) // 2)
+    reasoning = 3  # Nemotron 3 reasons before answering; output budget is mostly thinking
+    plan = {
+        "ultra": (2 * repo_tok + 18000, 2 * 2000 * reasoning),
+        "super": (n_files * 2 * 1500, n_files * 2 * 500 * reasoning),
+        "nano": (8000, 1200 * reasoning),
+    }
+    rows = {r: {"tokens_in": t_in, "tokens_out": t_out, "cost_usd": round(models[r].cost(t_in, t_out), 4)} for r, (t_in, t_out) in plan.items()}
+    total = sum(r["cost_usd"] for r in rows.values())
+    all_ultra = sum(models["ultra"].cost(r["tokens_in"], r["tokens_out"]) for r in rows.values())
+    return {"repo_tokens": repo_tok, "per_role": rows, "estimate_usd": round(total, 4),
+            "range_usd": [round(total * 0.5, 4), round(total * 2, 4)], "all_ultra_usd": round(all_ultra, 4)}

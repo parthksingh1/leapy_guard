@@ -128,6 +128,10 @@ tailwind.config = {
     <div class="px-5 pt-4 pb-2 flex items-center gap-2">
       <h2 id="scanTitle" class="font-bold">Vulnerability scan</h2>
       <span class="text-xs text-slate-500" id="scanMeta"></span>
+      <div class="ml-auto flex gap-2" id="scanDl" hidden>
+        <button id="dlSbom" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv" title="CycloneDX 1.5 SBOM with vulnerabilities and reachability analysis">SBOM (CycloneDX)</button>
+        <button id="dlVex" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv" title="OpenVEX statements: affected / not_affected from reachability">VEX (OpenVEX)</button>
+      </div>
     </div>
     <div id="findings" class="divide-y divide-slate-200 dark:divide-slate-800"></div>
   </section>
@@ -347,16 +351,20 @@ function renderFindings(findings, actionable) {
   $('#scanMeta').textContent = `${findings.length} vulnerable package(s), ${findings.reduce((a, f) => a + f.advisories.length, 0)} advisories · sorted by severity × reachability`;
   $('#findings').innerHTML = findings.map((f, i) => {
     const r = f.reachability || {}; const top = f.advisories[0] || {};
-    const cves = f.advisories.slice(0, 6).map((a) => `<a class="underline decoration-dotted hover:text-nv" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.cve || a.id)}</a> <span class="text-[10px] px-1 rounded ${sevCls[a.severity] || ''}">${esc(a.severity)}</span>`).join(' · ');
+    const cves = f.advisories.slice(0, 6).map((a) => `<a class="underline decoration-dotted hover:text-nv" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.cve || a.id)}</a> <span class="text-[10px] px-1 rounded ${sevCls[a.severity] || ''}">${esc(a.severity)}</span>${a.kev ? ' <span class="text-[10px] px-1 rounded bg-rose-700 text-white">KEV</span>' : ''}${a.epss != null ? ` <span class="text-[10px] text-slate-500">EPSS ${(a.epss * 100).toFixed(1)}%</span>` : ''}`).join(' · ');
     const ev = (r.evidence || []).slice(0, 5).map((x) => `<li><code class="text-xs">${esc(x.file)}:${x.line}</code> <span class="text-slate-500">${esc(x.why)}</span></li>`).join('');
     return `<div class="px-5 py-4">
       <div class="flex flex-wrap items-center gap-2">
         <span class="font-mono font-bold">${esc(f.package.name)} ${esc(f.package.version)}</span>
         <span class="text-xs px-2 py-0.5 rounded font-bold ${sevCls[f.severity] || ''}">${esc(f.severity)}</span>
         <span class="text-xs px-2 py-0.5 rounded font-bold ${reachCls[r.verdict] || ''}">${esc(r.verdict || '?')}</span>
+        ${f.kev ? '<span class="text-xs px-2 py-0.5 rounded font-bold bg-rose-700 text-white" title="Listed in the CISA Known Exploited Vulnerabilities catalog">CISA KEV · exploited in the wild</span>' : ''}
+        <span class="text-xs px-2 py-0.5 rounded font-semibold bg-slate-100 dark:bg-slate-800" title="FIRST EPSS: probability of exploitation in the next 30 days (highest across advisories)">EPSS ${((f.epss || 0) * 100).toFixed(1)}%</span>
+        <span class="text-xs font-mono text-slate-500" title="Priority = severity × reachability × (1 + 2·EPSS), +5 if CISA KEV">priority ${f.score}</span>
         ${r.by === 'nano' ? badge('nano') : '<span class="text-[10px] text-slate-500">static</span>'}
         <span class="text-xs text-slate-500">fixed in ${esc(f.fixed_version || '?')} · latest ${esc(f.latest_version || '?')} · <code>${esc(f.package.file)}:${f.package.line}</code></span>
-        ${actionable ? `<button class="fixBtn ml-auto px-4 py-1.5 rounded-lg bg-nv hover:bg-nv-dark text-black font-bold text-sm" data-pkg="${esc(f.package.name)}" ${CFG.live_enabled ? '' : 'disabled title="Live runs need NEBIUS_API_KEY"'}>Fix ${esc(f.package.name)}</button>` : ''}
+        ${actionable && f.estimate ? `<span class="ml-auto text-xs text-slate-500" title="Pre-run estimate from repo size (${f.estimate.repo_tokens.toLocaleString()} tokens) and usage count; the real cost is measured during the run">est. $${f.estimate.range_usd[0].toFixed(3)}–$${f.estimate.range_usd[1].toFixed(3)}</span>` : ''}
+        ${actionable ? `<button class="fixBtn ${f.estimate ? '' : 'ml-auto'} px-4 py-1.5 rounded-lg bg-nv hover:bg-nv-dark text-black font-bold text-sm" data-pkg="${esc(f.package.name)}" ${CFG.live_enabled ? '' : 'disabled title="Live runs need NEBIUS_API_KEY"'}>Fix ${esc(f.package.name)}</button>` : ''}
       </div>
       <div class="mt-2 text-sm">${cves}${f.advisories.length > 6 ? ` <span class="text-slate-500">+${f.advisories.length - 6} more</span>` : ''}</div>
       <details class="mt-2 text-sm" ${i === 0 ? 'open' : ''}><summary class="cursor-pointer text-slate-500">Why ${esc(r.verdict || '')}? (${r.usage_count || 0} usages)</summary>
@@ -405,6 +413,7 @@ function setProof(status, e) {
 function renderPlan(p) {
   $('#planPanel').classList.remove('hidden');
   $('#plan').innerHTML = `<p>${esc(p.summary)}</p>
+    ${(p.breaking_changes || []).length ? `<div class="mt-2 rounded-lg border border-rose-300/50 dark:border-rose-500/30 p-2"><div class="text-xs font-bold text-rose-600 dark:text-rose-400">What breaks in the new version</div><ul class="mt-1 list-disc pl-5 text-xs">${p.breaking_changes.map((b) => `<li>${esc(b)}</li>`).join('')}</ul></div>` : ''}
     <ul class="mt-2 space-y-1.5">${(p.files || []).map((f) => `<li class="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2"><code class="font-semibold">${esc(f.path)}</code> <span class="text-[10px] font-bold px-1.5 rounded ${f.risk === 'high' ? 'bg-rose-500 text-white' : f.risk === 'medium' ? 'bg-amber-400 text-black' : 'bg-emerald-500 text-white'}">${esc(f.risk || 'low')} risk</span><div class="text-xs text-slate-500 mt-0.5">${esc((f.changes || []).join(' · '))}</div></li>`).join('')}</ul>
     ${p.security_notes ? `<p class="mt-2 text-xs"><b>Security:</b> ${esc(p.security_notes)}</p>` : ''}`;
 }
@@ -489,7 +498,9 @@ function renderResult(status, r) {
       ${stat((c.routing_savings_pct || 0).toFixed(0) + '%', 'saved by routing', 'text-nv')}
       ${stat((r.confidence?.score ?? '–') + '', 'confidence / 100')}
     </div>
+    <div class="mt-3 flex flex-wrap gap-2 text-xs">${S.events[0]?.run_id && S.mode === 'live' ? `<button id="shareRun" class="px-3 py-1.5 rounded-lg font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv">Copy share link</button>` : ''}</div>
     ${S.delivery?.pr_url ? `<p class="mt-3 text-sm">Pull request: <a class="underline text-nv" href="${esc(S.delivery.pr_url)}" target="_blank" rel="noopener">${esc(S.delivery.pr_url)}</a></p>` : `<p class="mt-3 text-xs text-slate-500">${esc(S.delivery?.note || '')}</p>`}`;
+  $('#shareRun')?.addEventListener('click', async () => { const u = `${location.origin}/?run=${encodeURIComponent(S.events[0].run_id)}`; try { await navigator.clipboard.writeText(u); $('#shareRun').textContent = 'Link copied ✓'; } catch { prompt('Share link:', u); } });
   $('#copyMd').addEventListener('click', async () => { try { await navigator.clipboard.writeText(resultMarkdown(r)); $('#copyMd').textContent = 'Copied ✓'; } catch { prompt('Copy:', resultMarkdown(r)); } });
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -506,6 +517,8 @@ $('#dlAudit').addEventListener('click', () => download(`leaply-audit-${S.events[
   guardrails: S.events.filter((e) => e.kind === 'guardrail').map(({ path, reason }) => ({ path, reason })),
   events: S.events.length,
 }, null, 2), 'application/json'));
+$('#dlSbom').addEventListener('click', () => S.scan && download('sbom.cdx.json', JSON.stringify(S.scan.sbom, null, 2), 'application/json'));
+$('#dlVex').addEventListener('click', () => S.scan && download('leaply.openvex.json', JSON.stringify(S.scan.vex, null, 2), 'application/json'));
 $('#dlReport').addEventListener('click', () => S.report && download('leaply-report.md', S.report, 'text/markdown'));
 $('#dlSarif').addEventListener('click', () => S.sarif && download('leaply-guard.sarif', JSON.stringify(S.sarif, null, 2), 'application/json'));
 
@@ -535,8 +548,8 @@ async function startLive(pkg) {
   }
 }
 
-async function startReplay(name, speedArg) {
-  const r = await fetch(`/api/replays/${encodeURIComponent(name)}`);
+async function startReplay(name, speedArg, url) {
+  const r = await fetch(url || `/api/replays/${encodeURIComponent(name)}`);
   if (!r.ok) { alert('Replay not found'); return; }
   const data = await r.json();
   if (replayAbort) replayAbort.abort = true;
@@ -560,6 +573,7 @@ $('#scanBtn').addEventListener('click', async () => {
     const r = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: $('#preset').value, repo: CFG.hosted ? null : ($('#repo').value.trim() || null) }) });
     const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText);
     renderFindings(j.findings, true);
+    S.scan = j; $('#scanDl').hidden = false;
     $('#scanPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) { alert(err.message); } finally { btn.disabled = false; btn.textContent = 'Scan'; }
 });
@@ -585,7 +599,8 @@ $('#themeBtn').addEventListener('click', () => applyTheme(document.documentEleme
   $('#liveHint').textContent = hints.join(' ');
   S = { cost: {} }; renderCost();
   const q = new URLSearchParams(location.search);
-  if (q.get('replay') && CFG.replays.length) startReplay(q.get('replay') === '1' ? CFG.replays[0].name : q.get('replay'), q.get('speed'));
+  if (q.get('run')) startReplay(null, q.get('speed'), `/api/runs/${encodeURIComponent(q.get('run'))}`);
+  else if (q.get('replay') && CFG.replays.length) startReplay(q.get('replay') === '1' ? CFG.replays[0].name : q.get('replay'), q.get('speed'));
 })();
 </script>
 </body>

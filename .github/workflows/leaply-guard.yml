@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install Leaply Guard
-        run: pip install "leaply-guard @ git+https://github.com/YOUR_USER/leaply-guard" uv
+        run: pip install "leaply-guard @ git+https://github.com/parthksingh1/leaply-guard" uv
       - name: Scan and triage
         env:
           NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}

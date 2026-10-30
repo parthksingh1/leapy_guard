@@ -64,10 +64,11 @@ def build_report(data: dict, run_id: str) -> str:
         L += [f"  - {c}" for c in checks]
     L.append("")
     L.append("## Advisories")
-    L.append("| ID | CVE | Severity | Fixed in | Summary |")
-    L.append("|---|---|---|---|---|")
+    L.append("| ID | CVE | Severity | EPSS | CISA KEV | Fixed in | Summary |")
+    L.append("|---|---|---|---|---|---|---|")
     for a in f.get("advisories", []):
-        L.append(f"| [{a['id']}]({a['url']}) | {a.get('cve') or '-'} | {a['severity']} | {a.get('fixed') or '-'} | {a['summary']} |")
+        epss = f"{a['epss'] * 100:.1f}%" if a.get("epss") is not None else "-"
+        L.append(f"| [{a['id']}]({a['url']}) | {a.get('cve') or '-'} | {a['severity']} | {epss} | {'**yes**' if a.get('kev') else 'no'} | {a.get('fixed') or '-'} | {a['summary']} |")
     L.append("")
     L.append(f"**Reachability ({reach.get('by', 'static')}):** {reach.get('verdict', 'n/a')} — {reach.get('reasoning', '')}")
     for e in reach.get("evidence", [])[:6]:

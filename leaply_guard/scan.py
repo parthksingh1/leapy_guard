@@ -32,6 +32,10 @@ class Advisory:
     cvss_score: float | None
     fixed: str | None
     url: str
+    epss: float | None = None
+    epss_percentile: float | None = None
+    kev: bool = False
+    kev_ransomware: bool = False
 
     @property
     def cve(self) -> str | None:
@@ -48,6 +52,8 @@ class Finding:
     severity: str = "UNKNOWN"
     reachability: dict = field(default_factory=dict)
     score: float = 0.0
+    epss: float = 0.0
+    kev: bool = False
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -204,6 +210,8 @@ def scan_repo(repo: Path, timeout: float = 30) -> tuple[list[Dependency], list[F
                 id=f"{dep.ecosystem.lower()}:{dep.name.lower()}", package=dep, advisories=advs,
                 fixed_version=fixed_version, latest_version=latest_version(dep, client), severity=sev,
             ))
+    from .intel import enrich
+    enrich(findings)
     return deps, findings
 
 
