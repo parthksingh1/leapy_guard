@@ -56,3 +56,15 @@ def test_routing_savings():
 def test_security_proof_is_not_editable_by_agents():
     from leaply_guard.pipeline import PROOF_PATH, check_path_quiet
     assert check_path_quiet(PROOF_PATH)
+
+
+def test_env_example_has_no_real_keys():
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parent.parent / ".env.example").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if "=" in line and not line.startswith("#"):
+            name, value = line.split("=", 1)
+            assert value == "" or value.startswith("your-"), f"{name} in .env.example must be a placeholder"
+    assert not scan_secrets("
+".join("+" + l for l in text.splitlines()))
