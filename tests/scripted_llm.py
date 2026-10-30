@@ -85,6 +85,8 @@ class ScriptedLLM(LLM):
         if purpose == "failure triage":
             return json.dumps({"category": "api_change", "root_cause": f"old API still used in {sc['broken'][0]}",
                                "files": [sc["broken"][0]], "signature": "old api call"})
+        if purpose == "security review of final diff":
+            return json.dumps({"verdict": "approve", "findings": [{"file": "x", "severity": "low", "issue": "fine"}], "summary": "ok"})
         if purpose == "explain changes":
             return json.dumps({"files": {f: "Moved to the new, safe API." for f in fix_files},
                                "reviewer_summary": {"what_changed": "Upgraded.", "risk": "low", "double_check": ["callers"]}})

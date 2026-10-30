@@ -18,7 +18,9 @@ COPY replays ./replays
 
 # Warm the package cache so live demo runs create their sandboxes in seconds
 RUN uv venv -q /tmp/warm && uv pip install -q -p /tmp/warm -r demo/vulnerable-app/requirements.txt \
- && uv pip install -q -p /tmp/warm "PyJWT==2.15.1" && rm -rf /tmp/warm \
+ && uv pip install -q -p /tmp/warm "PyJWT==2.15.1" \
+ && uv pip install -q -p /tmp/warm -r demo/yaml-config-service/requirements.txt \
+ && uv pip install -q -p /tmp/warm "PyYAML==6.0.3" && rm -rf /tmp/warm \
  && mkdir -p runs && chmod -R a+rwX /app
 
 EXPOSE 7860

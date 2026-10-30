@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("run", help="upgrade a vulnerable package and prove it with tests")
     r.add_argument("--repo", default=str(settings.demo_repo), help="local path or GitHub URL")
     r.add_argument("--package", help="package to upgrade (default: highest-risk finding)")
-    r.add_argument("--target", help="target version (default: latest release)")
+    r.add_argument("--target", help="target version, or \"minimal\" for the lowest version that closes every advisory (default: latest release)")
     r.add_argument("--branch", action="store_true", help="commit the change on a local branch")
     r.add_argument("--pr", action="store_true", help="open a GitHub pull request (needs GITHUB_TOKEN and a GitHub URL)")
     r.add_argument("--keep", action="store_true", help="keep the temp workspace")

@@ -125,7 +125,8 @@ class Pipeline:
 
     def current_diff(self) -> dict[str, str]:
         out = {}
-        for path, before in self.files_changed.items():
+        # dependency file first, source files next, the added security test last
+        for path, before in sorted(self.files_changed.items(), key=lambda kv: kv[0] == PROOF_PATH):
             after = self.ws.read(path) if (self.ws.repo / path).exists() else ""
             d = make_diff(path, before, after)
             if d:
@@ -217,7 +218,10 @@ class Pipeline:
             self.result.status = "success"
             data["summary"] = "No known vulnerabilities in pinned dependencies." if not opts.package else f"{opts.package}: no known vulnerabilities."
             return
-        target = opts.target or finding.latest_version or finding.fixed_version
+        if opts.target == "minimal":  # smallest jump that closes every advisory
+            target = finding.fixed_version or finding.latest_version
+        else:
+            target = opts.target or finding.latest_version or finding.fixed_version
         data["finding"] = finding.to_dict()
         data["target"] = target
         primary = next((a for a in finding.advisories if a.id in VETTED_PROOFS or a.cve in VETTED_PROOFS), finding.advisories[0])
@@ -227,7 +231,7 @@ class Pipeline:
 
         # 3. RESEARCH -----------------------------------------------------------------
         self.step("research", "Research advisory and migration guide", actor="tavily")
-        research = run_research(finding, target, bus)
+        research = run_research(finding, target, bus, api_key=cfg.tavily_api_key)
         data["sources"] = research["sources"]
         self.done("research", actor="tavily", summary=f"{len(research['sources'])} sources, {len(research['extracts'])} pages extracted")
 
@@ -326,9 +330,21 @@ class Pipeline:
         bus.emit("explanations", step="explain", actor="nano", files=data["explanations"], reviewer_summary=data["reviewer_summary"])
         self.done("explain", actor="nano")
 
+        self.step("review", "Adversarial security review of the final diff", actor="ultra")
+        try:
+            review = agents.security_review(self.llm, diffs, finding, target)
+            review["findings"] = [f for f in review.get("findings", []) if isinstance(f, dict)]
+        except LLMError as exc:
+            review = {"verdict": "unavailable", "findings": [], "summary": f"review failed: {exc}"}
+        data["security_review"] = review
+        bus.emit("security_review", step="review", actor="ultra", **review)
+        high = [f for f in review["findings"] if f.get("severity") == "high"]
+        self.done("review", actor="ultra", status="ok" if not high else "warn",
+                  summary=f"{review.get('verdict')}: {len(review['findings'])} note(s), {len(high)} high")
+
         data["cost"] = self.llm.ledger.summary(cfg.models)
         data["confidence"] = confidence(data, self.max_iter)
-        success = result.ok and data["proof"]["after"] == "passed" and not secrets
+        success = result.ok and data["proof"]["after"] == "passed" and not secrets and not high
         self.result.status = "success" if success else "needs_review"
         data["status"] = self.result.status
 
@@ -475,7 +491,15 @@ def confidence(data: dict, max_iter: int) -> dict:
     if not data.get("rescan", {}).get("remaining"):
         score += 10
         reasons.append("0 known vulnerabilities remain (+10)")
-    level = "high" if score >= 85 else "medium" if score >= 60 else "low"
+    review = data.get("security_review", {})
+    high = [f for f in review.get("findings", []) if f.get("severity") == "high"]
+    if high:
+        score -= 30
+        reasons.append(f"security review raised {len(high)} high concern(s) (-30)")
+    elif review.get("verdict") == "approve":
+        reasons.append("security review approved (+0)")
+    score = max(score, 0)
+    level ="high" if score >= 85 else "medium" if score >= 60 else "low"
     return {"score": score, "level": level, "reasons": reasons,
             "needs_human_review": score < 60 or not after.get("ok") or "handover" in data}
 

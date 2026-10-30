@@ -242,7 +242,7 @@ tailwind.config = {
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ACTORS = {
-  ultra:   { label: 'Nemotron Ultra', short: 'ULTRA', cls: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300', role: 'Plan (1M ctx) · security test' },
+  ultra:   { label: 'Nemotron Ultra', short: 'ULTRA', cls: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300', role: 'Plan (1M ctx) · attack test · security review' },
   super:   { label: 'Nemotron Super', short: 'SUPER', cls: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300', role: 'Edits · fixes' },
   nano:    { label: 'Nemotron Nano',  short: 'NANO',  cls: 'bg-lime-100 text-lime-800 dark:bg-nv/15 dark:text-nv', role: 'Reachability · triage · explanations' },
   tavily:  { label: 'Tavily',  short: 'TAVILY', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' },
@@ -333,6 +333,7 @@ function handle(e) {
     case 'handover': tick(e, 'HANDOVER to a human: ' + e.reason); break;
     case 'rescan': tick(e, `re-scan ${e.package} ${e.version}: ${e.remaining.length} known vulnerabilities`); break;
     case 'explanations': S.expl = e.files || {}; renderExplain(); renderReview(e.reviewer_summary); break;
+    case 'security_review': renderSecurityReview(e); tick(e, `security review: ${e.verdict} (${(e.findings || []).length} notes)`); break;
     case 'report': S.report = e.markdown; S.sarif = e.sarif; break;
     case 'cost': renderSavings(e); break;
     case 'delivery': tick(e, e.pr_url ? 'pull request opened: ' + e.pr_url : (e.note || 'report written')); S.delivery = e; break;
@@ -393,18 +394,24 @@ function renderTests(e) {
   tick(e, `tests [${e.label}]: ${e.passed}/${e.total} passing`);
 }
 
+function attackView() {
+  if (!S?.proofCode) return '';
+  return `<details class="mt-2"><summary class="cursor-pointer font-semibold text-slate-700 dark:text-slate-300">View the attack test</summary><pre class="mt-1 max-h-64 overflow-auto rounded bg-slate-900 text-slate-100 p-2 text-[10px] leading-4 whitespace-pre">${esc(S.proofCode)}</pre></details>`;
+}
+
 function setProof(status, e) {
   const b = $('#proofBadge'), t = $('#proofTitle'), s = $('#proofSub');
   const base = 'rounded-2xl border-2 p-5 md:w-72 flex flex-col justify-center pop ';
   if (status === 'idle') { b.className = base + 'border-dashed border-slate-300 dark:border-slate-700'; t.textContent = 'Not run yet'; s.textContent = 'A real attack, written as a test'; return; }
   if (e && e.phase === 'before' && status === 'failed') {
     b.className = base + 'border-rose-500 bg-rose-50 dark:bg-rose-500/10'; t.innerHTML = '<span class="text-rose-600 dark:text-rose-400">✗ Attack ACCEPTED</span>';
-    s.innerHTML = `Forged token passes on the vulnerable version. Test written by ${e.source === 'ultra' ? 'Nemotron Ultra' : 'a vetted template'}.`;
+    S.proofCode = e.code || '';
+    s.innerHTML = `The exploit works on the vulnerable version. Test written by ${e.source === 'ultra' ? 'Nemotron Ultra (validated by running it)' : 'a vetted template'}.` + attackView();
     tick(e, 'security proof: attack accepted on vulnerable version (red)'); return;
   }
   if (status === 'passed') {
     b.className = base + 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'; t.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400">✓ Attack REJECTED</span>';
-    s.textContent = 'The same forged token is now refused.'; tick(e, 'security proof: attack rejected (green)'); return;
+    s.innerHTML = 'The same exploit is now refused.' + attackView(); tick(e, 'security proof: attack rejected (green)'); return;
   }
   if (status === 'unavailable') { b.className = base + 'border-slate-400'; t.textContent = 'No proof available'; s.textContent = e?.message || ''; return; }
   b.className = base + 'border-amber-500'; t.innerHTML = `<span class="text-amber-500">Still failing</span>`; s.textContent = 'The fix loop continues.';
@@ -439,6 +446,15 @@ function renderReview(r) {
   if (!r) return;
   $('#reviewPanel').classList.remove('hidden');
   $('#review').innerHTML = `<p><b>What changed:</b> ${esc(r.what_changed)}</p><p><b>Risk:</b> ${esc(r.risk)}</p>${(r.double_check || []).length ? `<div><b>Double-check:</b><ul class="list-disc pl-5">${r.double_check.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+function renderSecurityReview(r) {
+  $('#reviewPanel').classList.remove('hidden');
+  const ok = r.verdict === 'approve';
+  $('#review').insertAdjacentHTML('beforeend', `<div class="mt-3 rounded-lg border ${ok ? 'border-emerald-500/40' : 'border-amber-500/50'} p-3">
+    <div class="flex items-center gap-2">${badge('ultra')}<b>Adversarial security review:</b> <span class="${ok ? 'text-emerald-500' : 'text-amber-500'} font-bold">${esc(r.verdict)}</span></div>
+    <p class="text-xs text-slate-500 mt-1">${esc(r.summary || '')}</p>
+    ${(r.findings || []).length ? `<ul class="mt-1 text-xs space-y-0.5">${r.findings.map((f) => `<li><span class="font-bold ${f.severity === 'high' ? 'text-rose-500' : f.severity === 'medium' ? 'text-amber-500' : 'text-slate-500'}">${esc(f.severity)}</span> <code>${esc(f.file)}</code> ${esc(f.issue)}</li>`).join('')}</ul>` : ''}</div>`);
 }
 
 function renderCost() {
@@ -566,7 +582,10 @@ async function startReplay(name, speedArg, url) {
 }
 
 $('#liveBtn').addEventListener('click', () => startLive(null));
-$('#replayBtn').addEventListener('click', () => CFG.replays.length && startReplay(CFG.replays[0].name));
+$('#replayBtn').addEventListener('click', () => {
+  const r = CFG.replays.find((x) => x.name === $('#preset').value) || CFG.replays[0];
+  if (r) startReplay(r.name);
+});
 $('#scanBtn').addEventListener('click', async () => {
   const btn = $('#scanBtn'); btn.disabled = true; btn.textContent = 'Scanning…';
   try {

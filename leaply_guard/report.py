@@ -102,6 +102,13 @@ def build_report(data: dict, run_id: str) -> str:
     L.append("")
     L.append("<details><summary>Full diff</summary>\n\n```diff\n" + "".join(data.get("diff", {}).values()) + "```\n</details>")
     L.append("")
+    review = data.get("security_review")
+    if review:
+        L.append("## Adversarial security review (Nemotron 3 Ultra)")
+        L.append(f"**Verdict:** {review.get('verdict')} — {review.get('summary', '')}")
+        for f in review.get("findings", []):
+            L.append(f"- [{f.get('severity')}] `{f.get('file')}`: {f.get('issue')}")
+        L.append("")
     L.append("## Guardrails")
     L.append(f"- Status: **{g.get('status', 'n/a')}** ({g.get('checks', 0)} checks; max diff {g.get('max_diff_lines')} lines)")
     L.append(f"- Rejected edits: {len(g.get('rejected_edits', []))}" + "".join(f"\n  - {v}" for v in g.get("rejected_edits", [])))

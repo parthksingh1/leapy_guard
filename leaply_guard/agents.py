@@ -211,3 +211,22 @@ def estimate_cost(repo: Path, finding: Finding, models: dict, max_chars: int = 1
     all_ultra = sum(models["ultra"].cost(r["tokens_in"], r["tokens_out"]) for r in rows.values())
     return {"repo_tokens": repo_tok, "per_role": rows, "estimate_usd": round(total, 4),
             "range_usd": [round(total * 0.5, 4), round(total * 2, 4)], "all_ultra_usd": round(all_ultra, 4)}
+
+
+def security_review(llm: LLM, diffs: dict[str, str], finding: Finding, target: str, step: str = "review") -> dict:
+    """Critic agent: an adversarial review of the final diff before anything is delivered."""
+    body = "\n".join(diffs.values())[:40000]
+    prompt = f"""You are a strict security reviewer. An automated agent upgraded {finding.package.name}
+{finding.package.version} -> {target} to close: {', '.join((a.cve or a.id) for a in finding.advisories[:6])}.
+
+Review this final diff. Look for: weakened or removed security checks, disabled verification, broad exception
+swallowing, unsafe loaders/deserialisers, algorithm allow-lists that include unsafe options, secrets, unrelated
+changes, and behaviour changes that tests might not catch.
+
+{body}
+
+Reply with JSON only:
+{{"verdict": "approve|concerns", "findings": [{{"file": "...", "severity": "low|medium|high", "issue": "one sentence"}}],
+  "summary": "one sentence"}}"""
+    return llm.chat_json("ultra", "security review of final diff", [{"role": "user", "content": prompt}], step=step,
+                         max_tokens=4096, temperature=0.0)
