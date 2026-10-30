@@ -53,9 +53,9 @@ flowchart LR
     VT -- failing --> FT[Failure triage<br/>Nano] --> FX[Fix<br/>Super] --> G
     VT -- 3x same error / 6 iterations --> H[Hand over to a human]
     VT -- green --> RS[Re-scan<br/>OSV + pip-audit]
-    RS --> CR[Adversarial security review<br/>Nemotron 3 Ultra]
-    CR --> EX[Explain + reviewer summary<br/>Nano]
-    EX --> SC[Secret scan] --> OUT[Report, patch, SARIF,<br/>GitHub PR, confidence score]
+    RS --> EX[Explain + reviewer summary<br/>Nano]
+    EX --> CR[Adversarial security review<br/>Nemotron 3 Ultra]
+    CR --> SC[Secret scan] --> OUT[Report, patch, SARIF,<br/>GitHub PR, confidence score]
 
     subgraph Surfaces
       CLI[CLI]
