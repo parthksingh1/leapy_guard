@@ -1,6 +1,5 @@
 # Leaply Guard: Devpost submission draft
 
-> Numbers marked `{…}` come from the recorded live run (`runs/<run_id>.json` / the result card). Fill them in after the live run.
 
 **Tagline:** Your repo has a known vulnerability. The fix needs a major version bump that breaks your code. Leaply Guard upgrades it and proves it with your tests.
 
@@ -16,14 +15,14 @@ Paste a repo, click **Scan**. OSV.dev finds the vulnerable packages, FIRST EPSS 
 
 1. Tavily researches the advisory and the official migration guide at runtime.
 2. Nemotron Ultra writes a **security regression test**: a real attack (an HS256 token forged with the service's public key) that the vulnerable version accepts. It goes red.
-3. The version bump breaks {13} of {16} tests. Red.
+3. The version bump breaks 13 of 16 tests. Red.
 4. Ultra reads the **whole repo** (1M context) plus the research and writes a migration plan. Super applies it as diffs, behind guardrails.
 5. Tests run in an isolated venv. On failure, Nano triages and Super fixes, up to 6 times, with a handover to a human if the same error repeats.
-6. Green: {16/16} tests pass, and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities.
+6. Green: {{TESTS_AFTER}} tests pass, and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities.
 7. Nemotron Ultra reviews the final diff as an adversary (weakened checks, unsafe loaders). A high concern blocks success.
 8. A pull request opens with a reviewer summary, per-file explanations, before/after tests, the security proof, cost per model and sources.
 
-The whole run cost {$0.0X}, {NN}% less than running every step on Ultra.
+The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than running every step on Ultra.
 
 ## How we built it
 
@@ -40,13 +39,13 @@ The whole run cost {$0.0X}, {NN}% less than running every step on Ultra.
 - **Proving the security fix, not just the upgrade.** A model-written attack test that fails because of an import error proves nothing. We validate that it fails because the attack succeeded, and fall back to a vetted test when it does not.
 - **Finding model IDs** before we had keys, so the IDs are resolved against `/v1/models` at runtime.
 - **OSV data:** one issue under 2 or 3 IDs, and mixed severity formats.
-- {fill in: anything from the live runs}
+- [fill in] anything surprising from the live runs
 
 ## Accomplishments that we're proud of
 
 - The red → green moment comes from **real tests and a real attack**, not from a summary written by a model.
 - Honest failure: when it cannot fix something, it stops, says so, and lists what it tried.
-- Routing across three Nemotron sizes saved {NN}% on the demo run.
+- Routing across three Nemotron sizes saved {{SAVINGS_PCT}}% on the demo run.
 - One engine, four surfaces: CLI, web UI, MCP, GitHub Action, plus standard outputs: CycloneDX SBOM, OpenVEX, SARIF.
 - Two end-to-end demos, an auth bypass (PyJWT) and remote code execution (PyYAML), each with an executable proof.
 
@@ -73,20 +72,20 @@ The whole run cost {$0.0X}, {NN}% less than running every step on Ultra.
 
 **0:15–0:45 · Scan finds the CVE, Nano marks it REACHABLE**
 *(Web UI landing. Click **Scan**.)*
-"Leaply Guard scans the dependencies with OSV: PyJWT 1.7.1, {12} advisories, including CVE-2022-29217. EPSS and CISA KEV add exploit likelihood. Nemotron Nano checks reachability: REACHABLE. `service_auth.py` line 21 verifies tokens with a public key and no algorithm allow-list. Not just 'you have a CVE', but 'this line is exploitable'."
+"Leaply Guard scans the dependencies with OSV: PyJWT 1.7.1, 12 advisories, including CVE-2022-29217. EPSS and CISA KEV add exploit likelihood. Nemotron Nano checks reachability: REACHABLE. `service_auth.py` line 21 verifies tokens with a public key and no algorithm allow-list. Not just 'you have a CVE', but 'this line is exploitable'."
 *(Click **Fix PyJWT**.)*
 
 **0:45–1:30 · Ultra plans, Super fixes, red → green**
 *(Timeline fills; badges TAVILY, SANDBOX, ULTRA.)*
 "Tavily pulls the advisory and the official migration guide. Baseline: 15 of 15 tests pass. Now Nemotron Ultra writes a security test: a token forged with the public key. On the vulnerable version, the attack is **accepted**. That's red."
-*(Proof badge red. Test bar drops to {3/16}.)*
-"We bump the version, and {13} tests break. This is why nobody merges these PRs. Ultra reads the whole repo, 1M-token context, and writes a plan. Super applies it file by file. Guardrails reject an edit to a test file. One test still fails; Nano triages it, Super fixes it..."
-*(Bar goes green: {16/16}. Proof badge turns green.)*
+*(Proof badge red. Test bar drops to 3/16.)*
+"We bump the version, and 13 tests break. This is why nobody merges these PRs. Ultra reads the whole repo, 1M-token context, and writes a plan. Super applies it file by file. Guardrails reject an edit to a test file. One test still fails; Nano triages it, Super fixes it..."
+*(Bar goes green: {{TESTS_AFTER}}. Proof badge turns green.)*
 "16 of 16. And the same attack is now **rejected**."
 
 **1:30–2:00 · PR, cost, routing savings**
 *(Result card, then the PR on GitHub.)*
-"Ultra then reviews its own team's diff as an adversary: approved. Re-scan: 0 known vulnerabilities. Leaply Guard opens a pull request with a reviewer summary, a one-line explanation per file, tests before and after, the security proof, and every source. The whole run cost {$0.0X}, {NN}% less than using Ultra for everything, because each step uses the smallest model that can do it."
+"Ultra then reviews its own team's diff as an adversary: approved. Re-scan: 0 known vulnerabilities. Leaply Guard opens a pull request with a reviewer summary, a one-line explanation per file, tests before and after, the security proof, and every source. The whole run cost {{TOTAL_COST}}, {{SAVINGS_PCT}}% less than using Ultra for everything, because each step uses the smallest model that can do it."
 
 **2:00–2:40 · Architecture: which Nemotron does what**
 *(Mermaid diagram from the README.)*

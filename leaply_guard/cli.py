@@ -231,6 +231,11 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("mcp", help="run the MCP server over stdio").set_defaults(fn=cmd_mcp)
 
+    fin = sub.add_parser("finish", help="one command: preflight, live demo run, replay, RESULTS.md, fill docs, checks")
+    fin.add_argument("--with-yaml", action="store_true", help="also run the PyYAML demo and save its replay")
+    fin.add_argument("--from-run", metavar="RUN_JSON", help="skip the live run and fill docs from an existing live run file")
+    fin.set_defaults(fn=lambda a: __import__("leaply_guard.finish", fromlist=["main"]).main(a.with_yaml, a.from_run))
+
     args = p.parse_args(argv)
     return args.fn(args)
 

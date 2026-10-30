@@ -11,3 +11,4 @@ runs/
 build/
 dist/
 .DS_Store
+.leaply/

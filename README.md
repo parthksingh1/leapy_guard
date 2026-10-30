@@ -116,6 +116,10 @@ python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activ
 pip install -e ".[dev]"
 cp .env.example .env                              # add NEBIUS_API_KEY and TAVILY_API_KEY
 
+leaply-guard finish                               # everything in one go: preflight, live demo run, replay,
+                                                  # docs/RESULTS.md, results in the docs, secret scan, tests
+
+# or step by step:
 leaply-guard models                               # confirm the Nemotron 3 model ids on Token Factory
 leaply-guard ping                                 # one call each to Nano, Super, Ultra
 leaply-guard scan                                 # scan + triage the bundled demo repo
@@ -138,6 +142,25 @@ Run the project's own tests (offline, no keys needed; real OSV, real venvs, scri
 ```bash
 pytest -q
 ```
+
+## Results from the recorded live run
+
+PyJWT demo, NVIDIA Nemotron 3 on Nebius Token Factory (run `{{RUN_ID}}`, replayed in the web UI):
+
+| Measure | Result |
+|---|---|
+| Advisories found (OSV) | 12 for PyJWT 1.7.1, including CVE-2022-29217 |
+| Test suite before | 15/15 passing |
+| After the version bump, code unchanged | 3/16 passing (13 broken) |
+| After Leaply Guard | {{TESTS_AFTER}} passing |
+| Security proof (forged HS256 token) | {{PROOF_RESULT}} |
+| Fix iterations | {{ITERATIONS}} |
+| Wall-clock time | {{RUN_TIME}} |
+| Tokens | {{TOTAL_TOKENS}} (Ultra {{ULTRA_TOKENS}} · Super {{SUPER_TOKENS}} · Nano {{NANO_TOKENS}}) |
+| Model cost | {{TOTAL_COST}}, vs. {{ALL_ULTRA_COST}} on Ultra alone: **{{SAVINGS_PCT}}% saved by routing** |
+| Confidence | {{CONFIDENCE}}/100 |
+
+Full breakdown: [docs/RESULTS.md](docs/RESULTS.md).
 
 ## Supply-chain standards and CI
 

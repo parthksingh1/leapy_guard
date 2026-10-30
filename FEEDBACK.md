@@ -25,7 +25,7 @@
 - **[fill in]** Ultra with the whole repo in context: did the plan list every call site (6 in the demo, across 3 files)?
 - **[fill in]** Super's unified diffs: how often did they apply cleanly? (Our applier ignores line numbers and matches hunks by content. Count how often the full-file fallback was needed.)
 - **[fill in]** Nano's reachability verdicts and failure triage: correct on the demo? Was JSON-only output reliable?
-- **[fill in]** Routing savings on the demo run: X% vs. all-Ultra.
+- **[observed]** Routing savings on the demo run: {{SAVINGS_PCT}}% vs. all-Ultra ({{TOTAL_COST}} vs. {{ALL_ULTRA_COST}}).
 
 **What needs work**
 - **[observed, defensive code]** Reasoning output: we strip `<think>…</think>` and handle answers that are cut off during reasoning (empty content with `finish_reason=length`) by retrying with a larger budget. **[fill in]** Did this happen in practice? A documented per-request switch for reasoning on/off, the same across all three sizes, would make cost more predictable.

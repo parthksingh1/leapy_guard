@@ -269,7 +269,7 @@ function reset(mode) {
   document.querySelectorAll('.dl').forEach((b) => (b.disabled = true));
   const mb = $('#modeBadge'); mb.classList.remove('hidden');
   mb.className = 'ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ' + (mode === 'live' ? 'bg-rose-600 text-white' : 'bg-amber-400 text-black');
-  mb.innerHTML = mode === 'live' ? '<span class="pulse-dot">●</span> LIVE · real model calls' : '⟲ REPLAY · recorded live run <button id="skipBtn" class="ml-1 underline font-bold" aria-label="Skip to the result of the replay">skip ⏭</button>';
+  mb.innerHTML = mode === 'live' ? '<span class="pulse-dot">●</span> LIVE · real model calls' : '⟲ Recorded live run · 6× <button id="skipBtn" class="ml-1 underline font-bold" aria-label="Skip to the result of the replay">skip ⏭</button>';
   if (mode === 'replay') $('#skipBtn').addEventListener('click', () => { if (replayAbort) replayAbort.skip = true; });
   clearInterval(timer); timer = setInterval(() => { if (!S.done) $('#elapsed').textContent = ((Date.now() - S.start) / 1000).toFixed(0) + 's'; }, 500);
   renderCost();
@@ -571,6 +571,10 @@ async function startReplay(name, speedArg, url) {
   if (replayAbort) replayAbort.abort = true;
   const token = (replayAbort = { abort: false });
   reset('replay');
+  if (data.simulated) {  // scripted test data (dev mode only) is never labelled as a live run
+    $('#modeBadge').className = 'ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-500 text-white';
+    $('#modeBadge').textContent = 'SIMULATED · scripted test data, not a live run';
+  }
   const instant = speedArg === 'max'; const speed = Number(speedArg) || 6; let prev = 0;
   for (const e of data.events) {
     if (token.abort) return;
@@ -620,6 +624,12 @@ $('#themeBtn').addEventListener('click', () => applyTheme(document.documentEleme
   const q = new URLSearchParams(location.search);
   if (q.get('run')) startReplay(null, q.get('speed'), `/api/runs/${encodeURIComponent(q.get('run'))}`);
   else if (q.get('replay') && CFG.replays.length) startReplay(q.get('replay') === '1' ? CFG.replays[0].name : q.get('replay'), q.get('speed'));
+  else if (!q.has('home') && CFG.replays.length) {
+    // open on the recorded live run by default; the hero stays visible and "Run live demo" starts a fresh run
+    const r = CFG.replays.find((x) => x.name === $('#preset').value) || CFG.replays[0];
+    startReplay(r.name, q.get('speed'));
+    setTimeout(() => window.scrollTo({ top: 0 }), 50);
+  }
 })();
 </script>
 </body>
