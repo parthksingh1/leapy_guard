@@ -1,8 +1,8 @@
-"""Test double for the LLM: scripted answers for the PyJWT demo, so the pipeline mechanics can be tested offline.
+"""Test double for the LLM: scripted answers built from a reference fix, so the pipeline mechanics can be tested offline.
 
-Deliberately imperfect, to exercise the machinery: the first service_auth edit forgets the algorithms
-allow-list (forcing one fix iteration), diffs carry wrong line numbers, and the plan asks to edit a test file
-(which the guardrails must reject).
+Deliberately imperfect, to exercise the machinery: one file's first edit is wrong (forcing a fix iteration),
+diffs carry wrong line numbers, the security test is broken (forcing the vetted fallback), and the plan asks
+to edit a test file (which the guardrails must reject).
 """
 from __future__ import annotations
 
@@ -12,8 +12,24 @@ from pathlib import Path
 from leaply_guard.llm import LLM
 from leaply_guard.patching import make_diff
 
-FIX = Path(__file__).parent / "fixtures" / "pyjwt_fix"
-PROOF = Path(__file__).resolve().parent.parent / "leaply_guard" / "proofs" / "pyjwt_cve_2022_29217.py"
+FIXTURES = Path(__file__).parent / "fixtures"
+
+SCENARIOS = {
+    "pyjwt": {
+        "fix": FIXTURES / "pyjwt_fix",
+        "broken": ("app/service_auth.py", 'algorithms=["ES256"], ', ""),
+        "evidence": {"file": "app/service_auth.py", "line": 21, "why": "decode without algorithms using a public key"},
+        "test_file": "tests/test_tokens.py",
+        "breaking": ["encode returns str", "decode requires algorithms", "verify kwarg removed"],
+    },
+    "pyyaml": {
+        "fix": FIXTURES / "pyyaml_fix",
+        "broken": ("app/defaults.py", "yaml.safe_load(fh) or {}", "yaml.load(fh) or dict()"),
+        "evidence": {"file": "app/config_loader.py", "line": 14, "why": "yaml.load on request body with default FullLoader"},
+        "test_file": "tests/test_config.py",
+        "breaking": ["yaml.load requires Loader", "yaml.load_all requires Loader"],
+    },
+}
 
 
 def _wrong_line_numbers(diff: str) -> str:
@@ -21,10 +37,10 @@ def _wrong_line_numbers(diff: str) -> str:
 
 
 class ScriptedLLM(LLM):
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, scenario: str = "pyjwt", **kw):
         super().__init__(*a, **kw)
         self.simulated = True
-        self.fixed_service_auth = False
+        self.sc = SCENARIOS[scenario]
 
     def resolve_models(self):
         return {r: s.model_id for r, s in self.cfg.models.items()}
@@ -41,36 +57,35 @@ class ScriptedLLM(LLM):
     def _current(self, prompt: str) -> str:
         return prompt.split("```python\n", 1)[1].rsplit("\n```", 1)[0].rstrip("\n") + "\n"
 
+    def _fixed(self, path: str) -> str:
+        return (self.sc["fix"] / path).read_text(encoding="utf-8")
+
     def _answer(self, purpose: str, prompt: str) -> str:
+        sc = self.sc
+        fix_files = sorted(p.relative_to(sc["fix"]).as_posix() for p in sc["fix"].rglob("*.py"))
         if purpose.startswith("reachability"):
-            return json.dumps({"verdict": "REACHABLE", "evidence": [{"file": "app/service_auth.py", "line": 21, "why": "decode without algorithms using a public key"}],
-                               "reasoning": "verify_service_token decodes with the SSH public key and no allow-list.", "vulnerable_advisory": "GHSA-ffqj-6fqr-9h24"})
+            return json.dumps({"verdict": "REACHABLE", "evidence": [sc["evidence"]], "reasoning": sc["evidence"]["why"]})
         if purpose == "security regression test":
-            return "```python\nimport pytest\n\ndef test_broken():\n    from app.nope import x\n```"  # invalid on purpose -> vetted fallback
+            return "```python\nimport pytest\n\ndef test_broken():\n    from app.nope import x\n```"  # invalid on purpose
         if purpose == "migration plan":
-            return "```json\n" + json.dumps({
-                "summary": "Migrate to PyJWT 2.x: encode returns str, decode needs algorithms, verify=False becomes options.",
-                "breaking_changes": ["encode returns str", "decode requires algorithms", "verify kwarg removed"],
-                "files": [
-                    {"path": "app/tokens.py", "changes": ["drop .decode('utf-8')", "pass algorithms=[cfg.algorithm]"], "why": "2.x API", "risk": "low"},
-                    {"path": "app/service_auth.py", "changes": ["drop .decode('utf-8')", "pass algorithms=['ES256']"], "why": "closes CVE", "risk": "medium"},
-                    {"path": "app/introspect.py", "changes": ["options={'verify_signature': False}"], "why": "2.x API", "risk": "low"},
-                    {"path": "tests/test_tokens.py", "changes": ["update"], "why": "-", "risk": "low"},
-                ],
-                "security_notes": "explicit allow-list", "risks": ["service tokens now only accept ES256"], "overall_risk": "low"}) + "\n```"
+            files = [{"path": f, "changes": ["migrate"], "why": "new API", "risk": "low"} for f in fix_files]
+            files.append({"path": sc["test_file"], "changes": ["update"], "why": "-", "risk": "low"})
+            return "```json\n" + json.dumps({"summary": "Migrate to the new major version.", "breaking_changes": sc["breaking"],
+                                             "files": files, "security_notes": "safe defaults", "risks": ["check callers"],
+                                             "overall_risk": "low"}) + "\n```"
         if purpose.startswith("edit ") or purpose.startswith("fix "):
             path = purpose.split(" ", 1)[1]
-            before = self._current(prompt)
-            after = (FIX / path).read_text(encoding="utf-8")
-            if path == "app/service_auth.py" and purpose.startswith("edit "):
-                after = after.replace('algorithms=["ES256"], ', "")  # first attempt misses the allow-list
-            return _wrong_line_numbers(make_diff(path, before, after))
+            after = self._fixed(path)
+            bpath, good, bad = sc["broken"]
+            if path == bpath and purpose.startswith("edit "):
+                after = after.replace(good, bad)  # first attempt is wrong
+            return _wrong_line_numbers(make_diff(path, self._current(prompt), after))
         if purpose.startswith("rewrite "):
-            return "```python\n" + (FIX / purpose.split(" ", 1)[1]).read_text(encoding="utf-8") + "```"
+            return "```python\n" + self._fixed(purpose.split(" ", 1)[1]) + "```"
         if purpose == "failure triage":
-            return json.dumps({"category": "api_change", "root_cause": "jwt.decode called without algorithms in service_auth",
-                               "files": ["app/service_auth.py"], "signature": "DecodeError algorithms required"})
+            return json.dumps({"category": "api_change", "root_cause": f"old API still used in {sc['broken'][0]}",
+                               "files": [sc["broken"][0]], "signature": "old api call"})
         if purpose == "explain changes":
-            return json.dumps({"files": {"app/tokens.py": "PyJWT 2 returns str and needs an explicit HS256 allow-list."},
-                               "reviewer_summary": {"what_changed": "Upgraded PyJWT.", "risk": "low", "double_check": ["ES256 only"]}})
+            return json.dumps({"files": {f: "Moved to the new, safe API." for f in fix_files},
+                               "reviewer_summary": {"what_changed": "Upgraded.", "risk": "low", "double_check": ["callers"]}})
         raise AssertionError(f"unscripted purpose: {purpose}")

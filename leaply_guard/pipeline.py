@@ -25,7 +25,10 @@ from .workspace import TestResult, Workspace, bump_requirement
 PROOF_PATH = "tests/test_leaply_security_proof.py"
 PROOFS_DIR = Path(__file__).parent / "proofs"
 # vetted security tests for well-known advisories (used if the model-written test cannot be validated)
-VETTED_PROOFS = {"GHSA-ffqj-6fqr-9h24": "pyjwt_cve_2022_29217.py", "CVE-2022-29217": "pyjwt_cve_2022_29217.py"}
+VETTED_PROOFS = {
+    "GHSA-ffqj-6fqr-9h24": "pyjwt_cve_2022_29217.py", "CVE-2022-29217": "pyjwt_cve_2022_29217.py",
+    "GHSA-8q59-q68h-6hv4": "pyyaml_cve_2020_14343.py", "CVE-2020-14343": "pyyaml_cve_2020_14343.py",
+}
 
 
 @dataclass

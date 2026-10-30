@@ -21,6 +21,8 @@ DEV = os.environ.get("LEAPLY_DEV") == "1"
 REPLAYS = Path(os.environ.get("LEAPLY_REPLAYS_DIR", settings.replays_dir))
 PRESETS = {
     "pyjwt-demo": {"label": "Acme auth service · PyJWT 1.7.1 (CVE-2022-29217)", "repo": str(settings.demo_repo), "package": "PyJWT"},
+    "pyyaml-demo": {"label": "CI job service · PyYAML 5.3.1 (CVE-2020-14343, code execution)",
+                    "repo": str(settings.demo_repo.parent / "yaml-config-service"), "package": "PyYAML"},
 }
 
 app = FastAPI(title="Leaply Guard", docs_url="/api/docs")

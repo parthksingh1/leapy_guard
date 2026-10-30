@@ -1,0 +1,6 @@
+job:
+  timeout: 900
+  retries: 1
+env:
+  CI: "true"
+  REGION: eu-west-1
