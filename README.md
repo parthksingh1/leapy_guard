@@ -156,9 +156,12 @@ PyJWT demo (`demo/vulnerable-app`), NVIDIA Nemotron 3 on Nebius Token Factory:
 | After the migration | 16/16 passing |
 | Security proof (forged HS256 token) | accepted on 1.7.1 → rejected after the migration |
 | Re-scan of PyJWT 2.15.1 | 0 known vulnerabilities (all 12 advisories closed) |
-| Estimated model cost per fix | ≈ $0.08 (range $0.04–$0.16, ≈ 78k tokens) vs. ≈ $0.14 on Ultra alone: **≈ 43% saved by routing** |
+| Estimated model cost per fix | ~$0.08 (range $0.04–$0.16) vs. ~$0.14 on Ultra alone: **~43% saved by routing** |
+| Estimated tokens per fix | ~78k (Ultra ~36k · Super ~30k · Nano ~12k) |
+| Estimated model calls per fix | ~10 (Ultra 3 · Super 3–4 · Nano 3–4), 1–2 fix iterations |
+| Estimated wall-clock per fix | ~2–5 min (sandbox steps ~30 s measured offline; the rest is model time) |
 
-PyYAML demo (`demo/yaml-config-service`): 11/11 → 0/12 after the bump → 12/12 after the migration; the code-execution payload runs on 5.3.1 and is refused after the fix. Estimated ≈ $0.07 per fix, ≈ 38% saved by routing.
+PyYAML demo (`demo/yaml-config-service`): 11/11 → 0/12 after the bump → 12/12 after the migration; the code-execution payload runs on 5.3.1 and is refused after the fix. Estimated ~$0.07 per fix, ~38% saved by routing.
 
 The cost estimate comes from Leaply Guard's own pre-run estimator (repo size × usage count × list prices: Ultra $1/$3, Super $0.30/$0.90, Nano $0.06/$0.24 per 1M tokens). Every run measures its real tokens and cost per call and shows them in the cost panel, the report, the PR body and the audit log; `leaply-guard finish` writes the measured figures of the recorded run to [docs/RESULTS.md](docs/RESULTS.md).
 

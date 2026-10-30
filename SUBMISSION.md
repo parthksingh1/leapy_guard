@@ -22,7 +22,7 @@ Paste a repo, click **Scan**. OSV.dev finds the vulnerable packages, FIRST EPSS 
 7. Nemotron Ultra reviews the final diff as an adversary (weakened checks, unsafe loaders). A high concern blocks success.
 8. A pull request opens with a reviewer summary, per-file explanations, before/after tests, the security proof, cost per model and sources.
 
-Routing keeps a fix at an estimated ≈ $0.08 in model costs, ≈ 43% less than running every step on Ultra. Every run measures and shows its exact tokens and cost per model.
+Routing keeps a fix at an estimated ~$0.08 in model costs, ~43% less than running every step on Ultra. Every run measures and shows its exact tokens and cost per model.
 
 ## How we built it
 
@@ -45,7 +45,7 @@ Routing keeps a fix at an estimated ≈ $0.08 in model costs, ≈ 43% less than 
 
 - The red → green moment comes from **real tests and a real attack**, not from a summary written by a model.
 - Honest failure: when it cannot fix something, it stops, says so, and lists what it tried.
-- Routing across three Nemotron sizes cuts the estimated cost per fix by ≈ 43% compared with Ultra alone.
+- Routing across three Nemotron sizes cuts the estimated cost per fix by ~43% compared with Ultra alone.
 - One engine, four surfaces: CLI, web UI, MCP, GitHub Action, plus standard outputs: CycloneDX SBOM, OpenVEX, SARIF.
 - Two end-to-end demos, an auth bypass (PyJWT) and remote code execution (PyYAML), each with an executable proof.
 

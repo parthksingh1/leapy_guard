@@ -31,7 +31,7 @@ Paste a repo and click **Scan**. OSV.dev finds the vulnerable packages, FIRST EP
 6. Green: 16/16 tests pass and the attack is rejected. An OSV re-scan shows 0 known vulnerabilities. Ultra reviews the final diff as an adversary.
 7. A pull request opens with a reviewer summary, per-file explanations, before/after tests, the security proof, cost per model and every source.
 
-Estimated model cost per fix: **≈ $0.08** (≈ 78k tokens at list prices), **≈ 43% cheaper than running every step on Ultra**. Each run measures its exact tokens and cost per model and shows them in the UI and the PR.
+Estimated per fix: **~$0.08** model cost, ~78k tokens, ~10 model calls, ~2–5 min end to end, **~43% cheaper than running every step on Ultra**. Each run measures its exact tokens and cost per model and shows them in the UI and the PR.
 
 ## How we built it
 - **NVIDIA Nemotron 3 on Nebius Token Factory**, one model per job: Ultra (1M context) plans and writes the attack test and the security review; Super edits and fixes; Nano does reachability, failure triage and explanations. OpenAI-compatible client, with retries, timeouts, and per-call token and cost accounting.
@@ -49,7 +49,7 @@ Estimated model cost per fix: **≈ $0.08** (≈ 78k tokens at list prices), **�
 ## Accomplishments that we're proud of
 - The red → green moment comes from real tests and a real attack.
 - Honest failure: when it cannot fix something, it stops and says what it tried.
-- ≈ 43% estimated savings by routing across three Nemotron sizes.
+- ~43% estimated savings by routing across three Nemotron sizes.
 - Two end-to-end demos: an auth bypass (PyJWT) and remote code execution (PyYAML).
 
 ## What we learned
