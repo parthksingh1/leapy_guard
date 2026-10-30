@@ -17,17 +17,19 @@ Bump PRs that only change a version are easy. The ones that sit open are the **b
 ## What it does
 
 1. **Scan.** Parses `requirements*.txt`, `pyproject.toml` and `package.json`, queries **OSV.dev** (`/v1/querybatch` + `/v1/vulns/{id}`), merges GHSA/PYSEC/CVE aliases and computes CVSS 3.x scores.
-2. **Reachability triage (Nemotron 3 Nano).** Finds every import and call of the package and classifies each finding as `REACHABLE`, `POSSIBLY REACHABLE` or `NOT USED`, citing `file:line` evidence. Findings are ranked by severity × reachability. This is what a plain scanner does not give you.
-3. **Research (Tavily).** At runtime, searches for the advisory and the official migration guide / changelog, extracts the top pages, and shows every source in the UI and the report.
-4. **Baseline.** Copies the repo to a temp dir, creates its own virtualenv, and runs the test suite.
-5. **Security proof (Nemotron 3 Ultra).** Ultra writes a pytest regression test for the specific CVE (for CVE-2022-29217: an HS256 token forged with the service's *public* key must be rejected). It only counts if it **fails on the vulnerable version for the right reason** (attack accepted, not an import error). If it does not validate, a vetted template is used and the report says so.
-6. **Bump.** Deterministic edit of the pin, fresh venv, tests again. This is the red moment: the upgrade breaks the code.
-7. **Plan (Nemotron 3 Ultra).** The whole repository (1M-token context), the failing output and the research go into one call that returns a JSON plan: files, exact changes, why, risk.
-8. **Edit (Nemotron 3 Super).** Applies the plan file by file as unified diffs. Hunks are located by content, so wrong line numbers do not break them. If a diff does not apply, Super returns the full file instead.
-9. **Verify + fix loop (Nano triage, Super fixes).** Runs the tests. On failure, Nano classifies the error and picks the files, Super patches them, and the tests run again. Max 6 iterations. If the same error repeats 3 times, the run stops and hands over to a human with a list of what it tried.
-10. **Re-scan.** OSV (and `pip-audit -f json` if installed) on the new version: "0 known vulnerabilities for PyJWT 2.15.1".
-11. **Explain (Nemotron 3 Nano).** One plain-English line per changed file plus a reviewer summary: what changed, risk, what to double-check.
-12. **Deliver.** Markdown report, `changes.patch`, SARIF 2.1.0, a confidence score, and either a **real GitHub pull request** (if `GITHUB_TOKEN` is set) or the PR body in `report.md`. Optionally, a local git branch with a commit. Nothing is auto-merged.
+2. **Exploit intelligence.** Every CVE is enriched with its **FIRST EPSS** score (the probability it is exploited in the next 30 days) and checked against the **CISA KEV** catalog (known exploited in the wild). Both are free and need no key.
+3. **Reachability triage (Nemotron 3 Nano).** Finds every import and call of the package and classifies each finding as `REACHABLE`, `POSSIBLY REACHABLE` or `NOT USED`, citing `file:line` evidence. This is what a plain scanner does not give you. Findings are ranked by **priority = severity × reachability × (1 + 2·EPSS), +5 if in CISA KEV**, following the CVSS + EPSS + KEV + reachability model that current vulnerability-management guidance recommends.
+4. **Research (Tavily).** At runtime, searches for the advisory and the official migration guide / changelog, extracts the top pages, and shows every source in the UI and the report.
+5. **Baseline.** Copies the repo to a temp dir, creates its own virtualenv, and runs the test suite.
+6. **Security proof (Nemotron 3 Ultra).** Ultra writes a pytest regression test for the specific CVE (for CVE-2022-29217: an HS256 token forged with the service's *public* key must be rejected). It only counts if it **fails on the vulnerable version for the right reason** (attack accepted, not an import error). If it does not validate, a vetted template is used and the report says so.
+7. **Bump.** Deterministic edit of the pin, fresh venv, tests again. This is the red moment: the upgrade breaks the code.
+8. **Plan (Nemotron 3 Ultra).** The whole repository (1M-token context), the failing output and the research go into one call that returns a JSON plan: files, exact changes, why, risk.
+9. **Edit (Nemotron 3 Super).** Applies the plan file by file as unified diffs. Hunks are located by content, so wrong line numbers do not break them. If a diff does not apply, Super returns the full file instead.
+10. **Verify + fix loop (Nano triage, Super fixes).** Runs the tests. On failure, Nano classifies the error and picks the files, Super patches them, and the tests run again. Max 6 iterations. If the same error repeats 3 times, the run stops and hands over to a human with a list of what it tried.
+11. **Adversarial security review (Nemotron 3 Ultra).** A critic agent reviews the final diff for weakened checks, unsafe loaders, broad allow-lists, swallowed exceptions or unrelated changes. A high-severity concern blocks the "success" state and lowers confidence by 30.
+12. **Re-scan.** OSV (and `pip-audit -f json` if installed) on the new version: "0 known vulnerabilities for PyJWT 2.15.1".
+13. **Explain (Nemotron 3 Nano).** One plain-English line per changed file plus a reviewer summary: what changed, risk, what to double-check.
+15. **Deliver.** Markdown report, `changes.patch` (with the security test as a new regression test), SARIF 2.1.0, a confidence score, and either a **real GitHub pull request** (if `GITHUB_TOKEN` is set) or the PR body in `report.md`. Optionally, a local git branch with a commit. Nothing is auto-merged.
 
 ## Architecture
 
@@ -37,7 +39,9 @@ flowchart LR
       R[Repo path or GitHub URL]
     end
     R --> S[Scan<br/>OSV.dev querybatch]
-    S --> T[Reachability triage<br/>Nemotron 3 Nano]
+    S --> I[Exploit intel<br/>FIRST EPSS + CISA KEV]
+    I --> T[Reachability triage<br/>Nemotron 3 Nano<br/>priority score]
+    T --> EXP[Exports<br/>CycloneDX SBOM, OpenVEX, CI gate]
     T --> X[Research<br/>Tavily search + extract]
     X --> B[Baseline tests<br/>isolated venv]
     B --> P[Security proof<br/>Nemotron 3 Ultra<br/>must fail on vulnerable code]
@@ -49,7 +53,8 @@ flowchart LR
     VT -- failing --> FT[Failure triage<br/>Nano] --> FX[Fix<br/>Super] --> G
     VT -- 3x same error / 6 iterations --> H[Hand over to a human]
     VT -- green --> RS[Re-scan<br/>OSV + pip-audit]
-    RS --> EX[Explain + reviewer summary<br/>Nano]
+    RS --> CR[Adversarial security review<br/>Nemotron 3 Ultra]
+    CR --> EX[Explain + reviewer summary<br/>Nano]
     EX --> SC[Secret scan] --> OUT[Report, patch, SARIF,<br/>GitHub PR, confidence score]
 
     subgraph Surfaces
@@ -69,6 +74,7 @@ All model calls go through the OpenAI Python client pointed at Token Factory (`h
 | Step | Model | Why this model |
 |---|---|---|
 | Migration plan | **Nemotron 3 Ultra** | The plan needs the whole repository, the failing tests and the migration guide in one context to catch every call site. Ultra's 1M-token window means no retrieval and no missed files. It runs once per fix, so its price is paid once. |
+| Adversarial security review of the final diff | **Nemotron 3 Ultra** | A critic must be at least as strong as the author. Its input is only the diff, so the strongest model is cheap here. |
 | Security regression test | **Nemotron 3 Ultra** | A test that reproduces an attack must be exactly right (key formats, token structure). That is worth the strongest reasoning, and it is validated by execution before it counts. |
 | File edits, test fixes | **Nemotron 3 Super** | Many small, focused calls (one file at a time), with code quality close to Ultra at about a third of the price. |
 | Reachability, failure triage, per-file explanations, reviewer summary | **Nemotron 3 Nano** | Classification and short summaries: high volume, low difficulty. Nano is about 16× cheaper than Ultra on input. |
@@ -122,7 +128,8 @@ CLI:
 ```bash
 leaply-guard run --repo PATH_OR_GITHUB_URL --package NAME --target VERSION [--branch] [--pr]
                  [--max-iterations 6] [--max-diff-lines 400] [--keep] [--save-replay NAME]
-leaply-guard scan --repo PATH_OR_GITHUB_URL [--json]
+leaply-guard scan --repo PATH_OR_GITHUB_URL [--json] [--sbom sbom.cdx.json] [--vex vex.json] [--fail-on reachable-high]
+leaply-guard run --repo demo/yaml-config-service --package PyYAML --target minimal   # smallest version that closes every advisory
 leaply-guard save-replay RUN_ID --name pyjwt-demo
 ```
 
@@ -132,7 +139,14 @@ Run the project's own tests (offline, no keys needed; real OSV, real venvs, scri
 pytest -q
 ```
 
-## The demo repo
+## Supply-chain standards and CI
+
+- **CycloneDX 1.5 SBOM** with a `vulnerabilities` section: each advisory carries its rating, EPSS, KEV and an `analysis.state` derived from reachability (`exploitable` / `not_affected` / `in_triage`).
+- **OpenVEX** statements: `NOT USED` findings become `not_affected` with the justification `vulnerable_code_not_in_execute_path`, so downstream scanners stop flagging what cannot be reached. `REACHABLE` findings become `affected`, with the fix command.
+- **CI gate:** `leaply-guard scan --fail-on reachable-high` exits 1 only when a reachable HIGH/CRITICAL finding (or any CISA KEV finding) exists. The build fails on what matters, not on noise.
+- **Pre-run cost estimate:** before you click Fix, the UI shows a cost range estimated from repo size and usage count. It is labelled as an estimate; the measured cost replaces it during the run.
+
+## The demo repos
 
 `demo/vulnerable-app` is a small Flask auth service (login, refresh, `/me`, service-to-service tokens signed with ES256) pinned to **PyJWT 1.7.1**. It uses the 1.x API in three files: `jwt.encode(...).decode("utf-8")`, `jwt.decode` without `algorithms`, and `jwt.decode(token, verify=False)`.
 
@@ -142,12 +156,23 @@ pytest -q
 | PyJWT 2.15.1, code unchanged | 3/16 pass | — |
 | PyJWT 2.15.1 + Leaply Guard | 16/16 pass | **passes**: attack rejected |
 
+`demo/yaml-config-service` (second preset) is a Flask CI-job service pinned to **PyYAML 5.3.1**, affected by **CVE-2020-14343**: a submitted job definition can run arbitrary Python through `yaml.load`'s default FullLoader. PyYAML 6 makes `Loader=` mandatory, which breaks `yaml.load` / `yaml.load_all` in three places.
+
+| State | Test suite | Security proof (YAML code-execution payload) |
+|---|---|---|
+| PyYAML 5.3.1 | 11/11 pass | **fails**: payload executed |
+| PyYAML 6.0.3, code unchanged | 0/12 pass | — |
+| PyYAML 6.0.3 + `safe_load` migration | 12/12 pass | **passes**: payload refused, nothing executed |
+
 ## Web UI
 
 - Landing section with the pitch, a **Run live demo** button and the Scan → Fix → Prove steps.
-- **Scan** any repo (or the preset), pick a finding, click **Fix**.
+- **Scan** any repo (or a preset), pick a finding, click **Fix**. Findings show severity, reachability, EPSS, CISA KEV, the priority score and a pre-run cost estimate. The scan panel has **SBOM** and **VEX** downloads.
+- **Two presets:** PyJWT (auth bypass) and PyYAML (remote code execution).
 - Live agent timeline with a model badge on every step (ULTRA / SUPER / NANO / TAVILY / OSV / SANDBOX), a live activity ticker and a running cost counter.
-- Test bar that goes red then green, with a history row per stage; a separate **Security proof** badge (attack accepted → attack rejected).
+- Test bar that goes red then green, with a history row per stage; a separate **Security proof** badge (attack accepted → attack rejected) with **View the attack test**.
+- The adversarial security review verdict next to the reviewer summary, and a **What breaks in the new version** list in the plan.
+- **Share links:** after a live run, **Copy share link** gives `/?run=<id>`, which replays that exact run.
 - Migration plan, reviewer summary, diff viewer with a per-file explanation, sources, guardrails, confidence.
 - Final result card ("CVE closed · 16/16 tests · security proof passing · N iterations · $X · Y% saved by routing") with **Copy as markdown**.
 - Downloads: audit log (JSON), report / PR body (Markdown), SARIF 2.1.0.
@@ -203,7 +228,9 @@ Full steps: [docs/DEPLOY.md](docs/DEPLOY.md).
 - **Python first.** Scanning reads `package.json` too, but the fix pipeline (venv, pytest) is Python only.
 - **Only exact pins are scanned** (`==`). Ranges like `flask>=2.3` are not resolved, so a vulnerable resolved version can be missed. A lockfile resolver is the next step.
 - **Tests are the oracle.** If a repo has weak tests, "green" means less. The confidence score includes test count, but cannot know coverage. Repos with no tests get a low score and "needs human review".
-- **The security proof is per-advisory.** Ultra writes it, but it only counts if it fails on the vulnerable code for the right reason. The vetted template exists only for CVE-2022-29217. For other advisories, an unvalidated test is discarded and the report says "no proof", rather than claiming one.
+- **The security proof is per-advisory.** Ultra writes it, but it only counts if it fails on the vulnerable code for the right reason. Vetted templates exist for CVE-2022-29217 and CVE-2020-14343 (written against the demo apps' APIs). For other advisories, an unvalidated test is discarded and the report says "no proof", rather than claiming one.
+- **EPSS and KEV are enrichment, not truth.** EPSS is a probability model, and KEV only lists exploitation CISA has confirmed. Both are fetched live; if either service is down, the priority falls back to severity × reachability.
+- **The critic can be wrong both ways.** A false "high" blocks success and asks for a human review (the safe default). A missed issue is caught only by the tests and the proof.
 - **Reachability is static.** Nano reasons over import and call sites found by pattern matching, not a call graph. Dynamic imports and reflection can be missed. Verdicts come with evidence so a human can check.
 - **The sandbox is a separate venv, not a container.** It keeps our API keys out of the environment, but the code under test runs with the user's permissions. Run untrusted repos inside the Docker image. A Nebius Serverless job sandbox is on the roadmap.
 - **The upgrade target is the latest release by default.** That closes the most advisories, but is a bigger jump than the minimum fixed version. Use `--target` to choose.
@@ -221,7 +248,10 @@ Carried over as **ideas** (no code was copied; Leaply is TypeScript, Leaply Guar
 - Numbers in reports are counted from the run, never estimated. No auto-merge.
 
 New in Leaply Guard:
-- The security angle: OSV scanning, alias merging, CVSS scoring, and reachability triage.
+- The security angle: OSV scanning, alias merging, CVSS scoring, EPSS + CISA KEV exploit intelligence, and reachability triage with a combined priority.
+- CycloneDX SBOM and OpenVEX exports, and a CI policy gate.
+- An adversarial security review (critic agent) on every final diff.
+- A second end-to-end demo (PyYAML remote code execution).
 - Three-model routing on Nebius Token Factory (Nemotron 3 Ultra / Super / Nano), with per-call cost accounting and routing savings.
 - Runtime research with Tavily.
 - The executable security proof (red on vulnerable code, green after the fix), with validation.
@@ -235,6 +265,8 @@ New in Leaply Guard:
 ```
 leaply_guard/
   scan.py         OSV.dev scan, alias merge, CVSS 3.x
+  intel.py        FIRST EPSS + CISA KEV, priority score
+  exports.py      CycloneDX SBOM, OpenVEX
   triage.py       usage search + Nano reachability
   research.py     Tavily search + extract
   agents.py       prompts: Ultra plan / security test, Super edit / fix, Nano triage / explain
@@ -248,7 +280,8 @@ leaply_guard/
   mcp_server.py   MCP tools
   web/index.html  the UI
   proofs/         vetted security tests
-demo/vulnerable-app/  the PyJWT 1.7.1 demo service
+demo/vulnerable-app/       the PyJWT 1.7.1 demo service
+demo/yaml-config-service/  the PyYAML 5.3.1 demo service
 tests/                offline end-to-end and unit tests
 ```
 
