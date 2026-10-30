@@ -48,18 +48,58 @@ tailwind.config = {
   :focus-visible { outline: 2px solid #76b900; outline-offset: 2px; }
   section, #dash { scroll-margin-top: 4.5rem; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ---- premium visual layer ---- */
+  body { background: #f6f8fb; }
+  .dark body, html.dark body { background: #05070d; }
+  .bg-mesh { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .bg-mesh::before { content: ""; position: absolute; inset: -20%;
+    background: radial-gradient(40% 35% at 20% 10%, rgba(118,185,0,.18), transparent 60%),
+                radial-gradient(35% 30% at 85% 5%, rgba(124,58,237,.16), transparent 60%),
+                radial-gradient(30% 30% at 60% 90%, rgba(6,182,212,.10), transparent 60%);
+    filter: blur(10px); animation: drift 18s ease-in-out infinite alternate; }
+  .bg-mesh::after { content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(148,163,184,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.07) 1px, transparent 1px);
+    background-size: 44px 44px; mask-image: radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%); }
+  @keyframes drift { to { transform: translate3d(2%, 3%, 0) scale(1.05); } }
+  .card { position: relative; border-radius: 1.25rem; background: rgba(255,255,255,.75); border: 1px solid rgba(15,23,42,.08);
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 12px 40px -18px rgba(15,23,42,.18); backdrop-filter: blur(14px); }
+  .dark .card { background: linear-gradient(180deg, rgba(17,24,39,.72), rgba(10,14,24,.72)); border-color: rgba(148,163,184,.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 20px 60px -30px rgba(0,0,0,.8); }
+  .card h2 { font-size: .95rem; letter-spacing: -.01em; font-weight: 700; }
+  .gradient-text { background: linear-gradient(90deg, #a3e635, #76b900 35%, #22d3ee 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .btn-primary { background: linear-gradient(180deg, #8bd400, #6aa600); color: #071000; box-shadow: 0 0 0 1px rgba(118,185,0,.6), 0 10px 30px -8px rgba(118,185,0,.55), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .15s, box-shadow .15s; }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(118,185,0,.8), 0 16px 40px -8px rgba(118,185,0,.7), inset 0 1px 0 rgba(255,255,255,.35); }
+  .btn-ghost { background: rgba(255,255,255,.04); border: 1px solid rgba(148,163,184,.25); backdrop-filter: blur(8px); transition: border-color .15s, background .15s; }
+  .btn-ghost:hover:not(:disabled) { border-color: #76b900; background: rgba(118,185,0,.06); }
+  .pill { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 999px; font-size: .75rem; font-weight: 600;
+    background: rgba(118,185,0,.08); border: 1px solid rgba(118,185,0,.3); color: #76b900; }
+  .stat { border-radius: 1rem; padding: 1rem 1.1rem; }
+  .stat .num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1.35rem; letter-spacing: -.02em; }
+  .logo-chip { display: inline-flex; align-items: center; gap: .45rem; padding: .45rem .8rem; border-radius: .75rem; font-size: .8rem; font-weight: 600;
+    border: 1px solid rgba(148,163,184,.18); background: rgba(255,255,255,.03); }
+  .step-card { transition: transform .2s, border-color .2s; }
+  .step-card:hover { transform: translateY(-3px); border-color: rgba(118,185,0,.4); }
+  .flow-line { height: 2px; background: linear-gradient(90deg, transparent, #76b900, #22d3ee, transparent); background-size: 200% 100%; animation: flow 3s linear infinite; }
+  @keyframes flow { to { background-position: -200% 0; } }
+  #timeline li { border: 1px solid rgba(148,163,184,.1); }
+  #ticker { scrollbar-width: thin; }
+  select, input { outline: none; }
+  select:focus, input:focus { box-shadow: 0 0 0 2px rgba(118,185,0,.5); }
 </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-[#070b14] dark:text-slate-100 font-sans antialiased min-h-screen">
+<body class="text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen">
+<div class="bg-mesh" aria-hidden="true"></div>
 <a href="#app" class="sr-only focus:not-sr-only focus:absolute focus:p-2 focus:bg-nv focus:text-black">Skip to app</a>
 
 <!-- Header -->
-<header class="sticky top-0 z-30 backdrop-blur bg-white/80 dark:bg-[#070b14]/80 border-b border-slate-200 dark:border-slate-800">
+<header class="sticky top-0 z-30 backdrop-blur-xl bg-white/70 dark:bg-[#05070d]/70 border-b border-slate-200/70 dark:border-white/5">
   <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
     <svg aria-hidden="true" viewBox="0 0 32 32" class="w-7 h-7"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="#76b900"/><path d="m10 16 4 4 8-8" stroke="#fff" stroke-width="3" fill="none"/></svg>
     <span class="font-extrabold tracking-tight text-lg">Leaply Guard</span>
-    <span class="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">NVIDIA Nemotron 3 · Nebius Token Factory</span>
-    <span id="modeBadge" class="ml-auto hidden text-xs font-semibold px-2.5 py-1 rounded-full" role="status" aria-live="polite"></span>
+    <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-300/50 dark:border-white/10"><span class="w-1.5 h-1.5 rounded-full bg-nv"></span>NVIDIA Nemotron 3 · Nebius Token Factory</span>
+    <a href="https://github.com/parthksingh1/leapy_guard" target="_blank" rel="noopener" class="hidden sm:inline ml-auto text-sm font-medium text-slate-500 hover:text-nv dark:text-slate-400">GitHub ↗</a>
+    <span id="modeBadge" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full" role="status" aria-live="polite"></span>
     <button id="themeBtn" class="ml-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Toggle dark and light mode">
       <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.4-6.4-1.4 1.4M7 17l-1.4 1.4m12.8 0L17 17M7 7 5.6 5.6M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg>
     </button>
@@ -68,40 +108,61 @@ tailwind.config = {
 
 <main id="app" class="max-w-7xl mx-auto px-4 pb-24">
   <!-- Landing -->
-  <section id="hero" class="pt-10 pb-8 text-center" aria-labelledby="pitch">
-    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-nv mb-4">
-      <span class="w-1.5 h-1.5 rounded-full bg-nv"></span> Security upgrades that prove themselves
-    </p>
-    <h1 id="pitch" class="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight">
-      Your repo has a known vulnerability. The fix is a breaking upgrade.
-      <span class="text-nv">Leaply Guard upgrades it and proves it with your tests.</span>
+  <section id="hero" class="pt-16 pb-12 text-center" aria-labelledby="pitch">
+    <span class="pill"><span class="w-1.5 h-1.5 rounded-full bg-nv pulse-dot"></span>Security upgrades that prove themselves</span>
+    <h1 id="pitch" class="mt-6 text-4xl sm:text-6xl font-extrabold tracking-tight max-w-5xl mx-auto leading-[1.05]">
+      Known vulnerability. Breaking upgrade.<br class="hidden sm:block">
+      <span class="gradient-text">Fixed, and proven by your tests.</span>
     </h1>
+    <p class="mt-5 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+      Leaply Guard finds the CVEs your code can actually reach, migrates across the breaking major version with
+      <b class="text-slate-900 dark:text-slate-200">NVIDIA Nemotron 3</b> on <b class="text-slate-900 dark:text-slate-200">Nebius Token Factory</b>,
+      and proves the fix: tests go red to green, and a real attack goes from accepted to rejected.
+    </p>
     <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
-      <button id="liveBtn" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-nv hover:bg-nv-dark text-black font-bold text-lg shadow-lg shadow-nv/20 disabled:opacity-40 disabled:cursor-not-allowed" aria-describedby="liveHint">
-        ▶ Run live demo
+      <button id="liveBtn" class="btn-primary w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed" aria-describedby="liveHint">
+        ▶&nbsp; Run live demo
       </button>
-      <button id="replayBtn" class="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-nv font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
-        ⟲ Watch recorded run
+      <button id="replayBtn" class="btn-ghost w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+        ⟲&nbsp; Watch recorded run
       </button>
     </div>
     <p id="liveHint" class="mt-3 text-sm text-slate-500 dark:text-slate-400"></p>
-    <ol class="mt-10 grid sm:grid-cols-3 gap-3 max-w-4xl mx-auto text-left" aria-label="How it works">
-      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-        <div class="text-xs font-bold text-cyan-600 dark:text-cyan-400">1 · SCAN</div>
-        <div class="font-semibold mt-1">Find what is actually exploitable</div>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">OSV.dev finds the CVEs. Nemotron Nano checks whether your code reaches them.</p>
-      </li>
-      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-        <div class="text-xs font-bold text-violet-600 dark:text-violet-400">2 · FIX</div>
-        <div class="font-semibold mt-1">Migrate across the breaking change</div>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Ultra reads the whole repo and the migration guide. Super edits. A fix loop runs until tests pass.</p>
-      </li>
-      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-        <div class="text-xs font-bold text-nv">3 · PROVE</div>
-        <div class="font-semibold mt-1">Red to green, with a real attack</div>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your tests, plus a security test the attack must fail. Then a re-scan and a PR.</p>
-      </li>
-    </ol>
+
+    <div class="mt-10 flex flex-wrap justify-center gap-2 text-slate-600 dark:text-slate-300" aria-label="Built with">
+      <span class="logo-chip"><span class="w-2 h-2 rounded-sm bg-nv"></span>NVIDIA Nemotron 3 Ultra · Super · Nano</span>
+      <span class="logo-chip"><span class="w-2 h-2 rounded-sm bg-violet-500"></span>Nebius Token Factory</span>
+      <span class="logo-chip"><span class="w-2 h-2 rounded-sm bg-amber-400"></span>Tavily</span>
+      <span class="logo-chip"><span class="w-2 h-2 rounded-sm bg-cyan-400"></span>OSV.dev · EPSS · CISA KEV</span>
+    </div>
+
+    <div class="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto text-left">
+      <div class="card stat"><div class="num">12</div><div class="text-xs text-slate-500 mt-1">advisories found in PyJWT 1.7.1</div></div>
+      <div class="card stat"><div class="num"><span class="text-emerald-500">15</span>→<span class="text-rose-500">3</span>→<span class="text-emerald-500">16</span></div><div class="text-xs text-slate-500 mt-1">tests passing: before → bump → fixed</div></div>
+      <div class="card stat"><div class="num">3</div><div class="text-xs text-slate-500 mt-1">Nemotron models, routed per task</div></div>
+      <div class="card stat"><div class="num text-nv">~43%</div><div class="text-xs text-slate-500 mt-1">est. cost saved vs. Ultra-only</div></div>
+    </div>
+
+    <div class="mt-12 max-w-5xl mx-auto">
+      <div class="flow-line rounded-full mb-4" aria-hidden="true"></div>
+      <ol class="grid sm:grid-cols-3 gap-3 text-left" aria-label="How it works">
+        <li class="card step-card p-6">
+          <div class="flex items-center gap-2"><span class="w-7 h-7 rounded-lg grid place-items-center text-xs font-bold bg-cyan-500/15 text-cyan-500">1</span><span class="text-xs font-bold tracking-widest text-cyan-500">SCAN</span></div>
+          <div class="font-semibold mt-3">Find what is actually exploitable</div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">OSV, EPSS and CISA KEV rank the CVEs. Nemotron Nano proves which lines reach them.</p>
+        </li>
+        <li class="card step-card p-6">
+          <div class="flex items-center gap-2"><span class="w-7 h-7 rounded-lg grid place-items-center text-xs font-bold bg-violet-500/15 text-violet-400">2</span><span class="text-xs font-bold tracking-widest text-violet-400">FIX</span></div>
+          <div class="font-semibold mt-3">Migrate across the breaking change</div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Ultra plans with the whole repo in a 1M context. Super edits behind guardrails until tests pass.</p>
+        </li>
+        <li class="card step-card p-6">
+          <div class="flex items-center gap-2"><span class="w-7 h-7 rounded-lg grid place-items-center text-xs font-bold bg-nv/15 text-nv">3</span><span class="text-xs font-bold tracking-widest text-nv">PROVE</span></div>
+          <div class="font-semibold mt-3">Red to green, with a real attack</div>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">A security test the attack must fail, an adversarial review, an OSV re-scan, then a PR.</p>
+        </li>
+      </ol>
+    </div>
   </section>
 
   <!-- Controls -->
@@ -109,13 +170,13 @@ tailwind.config = {
     <div class="flex flex-col lg:flex-row gap-3 lg:items-end">
       <div class="flex-1 min-w-0">
         <label for="preset" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Demo repository</label>
-        <select id="preset" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-slate-800 border-0 px-3 py-2"></select>
+        <select id="preset" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-2.5"></select>
       </div>
       <div class="flex-1 min-w-0" id="repoWrap">
         <label for="repo" class="text-xs font-semibold text-slate-500 dark:text-slate-400">…or a local path / GitHub URL</label>
-        <input id="repo" type="text" placeholder="https://github.com/owner/repo" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-slate-800 border-0 px-3 py-2 font-mono text-sm" autocomplete="off">
+        <input id="repo" type="text" placeholder="https://github.com/owner/repo" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-2.5 font-mono text-sm" autocomplete="off">
       </div>
-      <button id="scanBtn" class="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold">Scan</button>
+      <button id="scanBtn" class="px-6 py-2.5 rounded-lg font-semibold text-white bg-gradient-to-b from-cyan-500 to-cyan-700 shadow-lg shadow-cyan-500/20 hover:brightness-110">Scan repository</button>
     </div>
     <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500 dark:text-slate-400" id="limits" aria-label="Safety limits"></div>
   </section>
@@ -124,7 +185,7 @@ tailwind.config = {
   <section id="resultCard" class="hidden mt-6 rounded-2xl p-5 border-2 pop" aria-live="polite" aria-label="Result"></section>
 
   <!-- Scan -->
-  <section id="scanPanel" class="hidden mt-6 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800" aria-labelledby="scanTitle">
+  <section id="scanPanel" class="hidden mt-6 card" aria-labelledby="scanTitle">
     <div class="px-5 pt-4 pb-2 flex items-center gap-2">
       <h2 id="scanTitle" class="font-bold">Vulnerability scan</h2>
       <span class="text-xs text-slate-500" id="scanMeta"></span>
@@ -139,7 +200,7 @@ tailwind.config = {
   <!-- Run dashboard -->
   <div id="dash" class="hidden mt-6 grid lg:grid-cols-[340px_1fr] gap-6">
     <!-- Timeline -->
-    <aside class="lg:sticky lg:top-20 self-start rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-4" aria-labelledby="tlTitle">
+    <aside class="lg:sticky lg:top-20 self-start card p-4" aria-labelledby="tlTitle">
       <div class="flex items-center">
         <h2 id="tlTitle" class="font-bold">Agent timeline</h2>
         <span id="elapsed" class="ml-auto font-mono text-xs text-slate-500"></span>
@@ -154,13 +215,13 @@ tailwind.config = {
     <div class="space-y-6 min-w-0">
       <!-- Proof row -->
       <section class="grid md:grid-cols-[1fr_auto] gap-4" aria-label="Proof">
-        <div class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5">
+        <div class="card p-5">
           <div class="flex items-baseline gap-2">
             <h2 class="font-bold">Test suite</h2>
             <span id="testLabel" class="text-xs text-slate-500"></span>
             <span id="testCount" class="ml-auto font-mono font-bold text-lg">–</span>
           </div>
-          <div class="mt-3 h-5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex" role="img" id="testBarWrap" aria-label="No tests run yet">
+          <div class="mt-3 h-6 rounded-full bg-slate-200 dark:bg-white/5 ring-1 ring-inset ring-white/5 overflow-hidden flex" role="img" id="testBarWrap" aria-label="No tests run yet">
             <div id="barPass" class="seg h-full bg-emerald-500" style="width:0"></div>
             <div id="barFail" class="seg h-full bg-rose-500" style="width:0"></div>
           </div>
@@ -174,10 +235,10 @@ tailwind.config = {
       </section>
 
       <!-- Cost -->
-      <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="costTitle">
+      <section class="card p-5" aria-labelledby="costTitle">
         <div class="flex items-baseline gap-3 flex-wrap">
           <h2 id="costTitle" class="font-bold">Models, tokens and cost</h2>
-          <span class="ml-auto font-mono text-2xl font-extrabold text-nv" id="costTotal" aria-live="polite">$0.0000</span>
+          <span class="ml-auto font-mono text-3xl font-extrabold gradient-text" id="costTotal" aria-live="polite">$0.0000</span>
         </div>
         <div class="overflow-x-auto">
           <table class="mt-3 w-full text-sm">
@@ -189,19 +250,19 @@ tailwind.config = {
       </section>
 
       <!-- Reviewer summary -->
-      <section id="reviewPanel" class="hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="revTitle">
+      <section id="reviewPanel" class="hidden card p-5" aria-labelledby="revTitle">
         <h2 id="revTitle" class="font-bold">Reviewer summary</h2>
         <div id="review" class="mt-2 text-sm space-y-2"></div>
       </section>
 
       <!-- Plan -->
-      <section id="planPanel" class="hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="planTitle">
+      <section id="planPanel" class="hidden card p-5" aria-labelledby="planTitle">
         <div class="flex items-center gap-2"><h2 id="planTitle" class="font-bold">Migration plan</h2><span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">ULTRA</span></div>
         <div id="plan" class="mt-2 text-sm"></div>
       </section>
 
       <!-- Diff -->
-      <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="diffTitle">
+      <section class="card p-5" aria-labelledby="diffTitle">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 id="diffTitle" class="font-bold">Changes</h2>
           <span id="diffStats" class="text-xs text-slate-500"></span>
@@ -216,11 +277,11 @@ tailwind.config = {
 
       <!-- Sources + guardrails -->
       <div class="grid md:grid-cols-2 gap-6">
-        <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="srcTitle">
+        <section class="card p-5" aria-labelledby="srcTitle">
           <div class="flex items-center gap-2"><h2 id="srcTitle" class="font-bold">Sources</h2><span class="text-xs text-slate-500" id="srcMeta"></span></div>
           <ul id="sources" class="mt-2 space-y-2 text-sm"><li class="text-slate-500">Tavily research appears here.</li></ul>
         </section>
-        <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="grTitle">
+        <section class="card p-5" aria-labelledby="grTitle">
           <h2 id="grTitle" class="font-bold">Guardrails and audit</h2>
           <ul id="guard" class="mt-2 space-y-1.5 text-sm"><li class="text-slate-500">Every edit is checked: repo scope, protected files, unrelated tests, diff size, secrets.</li></ul>
           <div class="mt-4 flex flex-wrap gap-2">
@@ -234,7 +295,7 @@ tailwind.config = {
   </div>
 </main>
 
-<footer class="max-w-7xl mx-auto px-4 pb-10 text-xs text-slate-500">
+<footer class="max-w-7xl mx-auto px-4 pb-10 pt-6 text-xs text-slate-500 border-t border-slate-200/60 dark:border-white/5">
   Leaply Guard · MIT · Built for the Nebius × NVIDIA Global AI Hackathon. Tests run in an isolated virtualenv; nothing is auto-merged.
 </footer>
 
