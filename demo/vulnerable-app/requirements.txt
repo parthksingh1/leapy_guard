@@ -1,0 +1,4 @@
+flask>=2.3,<4
+PyJWT==1.7.1
+cryptography>=41
+pytest>=7
