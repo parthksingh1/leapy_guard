@@ -87,7 +87,7 @@ Without a Tavily key, the run still works from the OSV advisory references and s
 
 ## Trust and safety
 
-- **Guardrails on every edit:** only files inside the target repo; never `.env*`, CI config, lockfiles, keys or secrets files; never test files (the tests are the proof, so they are not rewritten to pass), except the security proof that Leaply Guard adds itself. A diff that touches a file outside its own edit is rejected. Violations are shown in the UI and the report ("guardrails: passed").
+- **Guardrails on every edit:** only files inside the target repo; never `.env*`, CI config, lockfiles, keys or secrets files; never test files (the tests are the proof, so they are not rewritten to pass). The security test that Leaply Guard adds is locked the same way, so the fix loop cannot "fix" the proof. It ships in the PR as a regression test. A diff that touches a file outside its own edit is rejected. Violations are shown in the UI and the report ("guardrails: passed").
 - **Secret scan** of the final diff (AWS, GitHub, OpenAI-style, Slack, Tavily keys, private key blocks, generic credentials). Any hit blocks the branch and PR.
 - **Limits, configurable and shown in the UI:** max fix iterations (6), same-error handover (3), max diff size (400 lines).
 - **The sandbox never sees our keys:** `NEBIUS_API_KEY`, `TAVILY_API_KEY` and `GITHUB_TOKEN` are removed from the environment of every command it runs.
