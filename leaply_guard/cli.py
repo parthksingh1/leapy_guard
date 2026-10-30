@@ -157,6 +157,11 @@ def cmd_mcp(_args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(prog="leaply-guard", description="Upgrade vulnerable dependencies and prove it with your tests.")
     sub = p.add_subparsers(dest="cmd", required=True)
 

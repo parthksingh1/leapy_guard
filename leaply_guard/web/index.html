@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaply Guard</title>
+<meta name="description" content="Upgrade a vulnerable dependency across a breaking version and prove it with your tests. NVIDIA Nemotron 3 on Nebius Token Factory.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%2376b900'/><path d='m10 16 4 4 8-8' stroke='%23fff' stroke-width='3' fill='none'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] },
+    colors: { nv: { DEFAULT: '#76b900', dark: '#5a8f00' } },
+  } },
+};
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html@3.4.48/bundles/css/diff2html.min.css">
+<script src="https://cdn.jsdelivr.net/npm/diff2html@3.4.48/bundles/js/diff2html-ui.min.js"></script>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-feature-settings: "cv11", "ss01"; }
+  .seg { transition: width .5s cubic-bezier(.2,.8,.2,1); }
+  .pulse-dot { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+  @keyframes pop { 0% { transform: scale(.96); opacity: .4 } 100% { transform: scale(1); opacity: 1 } }
+  .pop { animation: pop .35s ease-out; }
+  .d2h-file-header { position: sticky; top: 0; z-index: 1; }
+  .dark .d2h-wrapper, .dark .d2h-file-wrapper { background: #0b1220; border-color: #1f2937; }
+  .dark .d2h-file-header { background: #111827; border-color: #1f2937; color: #e5e7eb; }
+  .dark .d2h-code-line, .dark .d2h-code-side-line, .dark .d2h-code-linenumber, .dark .d2h-code-side-linenumber { background: #0b1220; color: #d1d5db; border-color: #1f2937; }
+  .dark .d2h-del { background: #3b0d14 !important; border-color: #5b1520; }
+  .dark .d2h-ins { background: #0d2b16 !important; border-color: #14532d; }
+  .dark .d2h-code-line del, .dark .d2h-code-side-line del { background: #7f1d1d; }
+  .dark .d2h-code-line ins, .dark .d2h-code-side-line ins { background: #166534; }
+  .dark .d2h-info { background: #111827; color: #9ca3af; border-color: #1f2937; }
+  .dark .d2h-file-name { color: #e5e7eb; }
+  .dark .d2h-tag { background: #1f2937; }
+  .dark .d2h-emptyplaceholder, .dark .d2h-code-side-emptyplaceholder { background: #111827; border-color: #1f2937; }
+  .dark .hljs-keyword, .dark .hljs-built_in { color: #c4b5fd; }
+  .dark .hljs-string { color: #86efac; }
+  .dark .hljs-title, .dark .hljs-function { color: #93c5fd; }
+  .dark .hljs-comment { color: #6b7280; }
+  .dark .hljs-number, .dark .hljs-literal { color: #fdba74; }
+  :focus-visible { outline: 2px solid #76b900; outline-offset: 2px; }
+  section, #dash { scroll-margin-top: 4.5rem; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-[#070b14] dark:text-slate-100 font-sans antialiased min-h-screen">
+<a href="#app" class="sr-only focus:not-sr-only focus:absolute focus:p-2 focus:bg-nv focus:text-black">Skip to app</a>
+
+<!-- Header -->
+<header class="sticky top-0 z-30 backdrop-blur bg-white/80 dark:bg-[#070b14]/80 border-b border-slate-200 dark:border-slate-800">
+  <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
+    <svg aria-hidden="true" viewBox="0 0 32 32" class="w-7 h-7"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="#76b900"/><path d="m10 16 4 4 8-8" stroke="#fff" stroke-width="3" fill="none"/></svg>
+    <span class="font-extrabold tracking-tight text-lg">Leaply Guard</span>
+    <span class="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">NVIDIA Nemotron 3 · Nebius Token Factory</span>
+    <span id="modeBadge" class="ml-auto hidden text-xs font-semibold px-2.5 py-1 rounded-full" role="status" aria-live="polite"></span>
+    <button id="themeBtn" class="ml-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Toggle dark and light mode">
+      <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.4-6.4-1.4 1.4M7 17l-1.4 1.4m12.8 0L17 17M7 7 5.6 5.6M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="app" class="max-w-7xl mx-auto px-4 pb-24">
+  <!-- Landing -->
+  <section id="hero" class="pt-10 pb-8 text-center" aria-labelledby="pitch">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-nv mb-4">
+      <span class="w-1.5 h-1.5 rounded-full bg-nv"></span> Security upgrades that prove themselves
+    </p>
+    <h1 id="pitch" class="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight">
+      Your repo has a known vulnerability. The fix is a breaking upgrade.
+      <span class="text-nv">Leaply Guard upgrades it and proves it with your tests.</span>
+    </h1>
+    <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
+      <button id="liveBtn" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-nv hover:bg-nv-dark text-black font-bold text-lg shadow-lg shadow-nv/20 disabled:opacity-40 disabled:cursor-not-allowed" aria-describedby="liveHint">
+        ▶ Run live demo
+      </button>
+      <button id="replayBtn" class="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-nv font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+        ⟲ Watch recorded run
+      </button>
+    </div>
+    <p id="liveHint" class="mt-3 text-sm text-slate-500 dark:text-slate-400"></p>
+    <ol class="mt-10 grid sm:grid-cols-3 gap-3 max-w-4xl mx-auto text-left" aria-label="How it works">
+      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+        <div class="text-xs font-bold text-cyan-600 dark:text-cyan-400">1 · SCAN</div>
+        <div class="font-semibold mt-1">Find what is actually exploitable</div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">OSV.dev finds the CVEs. Nemotron Nano checks whether your code reaches them.</p>
+      </li>
+      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+        <div class="text-xs font-bold text-violet-600 dark:text-violet-400">2 · FIX</div>
+        <div class="font-semibold mt-1">Migrate across the breaking change</div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Ultra reads the whole repo and the migration guide. Super edits. A fix loop runs until tests pass.</p>
+      </li>
+      <li class="rounded-2xl p-5 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+        <div class="text-xs font-bold text-nv">3 · PROVE</div>
+        <div class="font-semibold mt-1">Red to green, with a real attack</div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Your tests, plus a security test the attack must fail. Then a re-scan and a PR.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Controls -->
+  <section class="rounded-2xl p-4 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800" aria-label="Target">
+    <div class="flex flex-col lg:flex-row gap-3 lg:items-end">
+      <div class="flex-1 min-w-0">
+        <label for="preset" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Demo repository</label>
+        <select id="preset" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-slate-800 border-0 px-3 py-2"></select>
+      </div>
+      <div class="flex-1 min-w-0" id="repoWrap">
+        <label for="repo" class="text-xs font-semibold text-slate-500 dark:text-slate-400">…or a local path / GitHub URL</label>
+        <input id="repo" type="text" placeholder="https://github.com/owner/repo" class="mt-1 w-full rounded-lg bg-slate-100 dark:bg-slate-800 border-0 px-3 py-2 font-mono text-sm" autocomplete="off">
+      </div>
+      <button id="scanBtn" class="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold">Scan</button>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500 dark:text-slate-400" id="limits" aria-label="Safety limits"></div>
+  </section>
+
+  <!-- Result card -->
+  <section id="resultCard" class="hidden mt-6 rounded-2xl p-5 border-2 pop" aria-live="polite" aria-label="Result"></section>
+
+  <!-- Scan -->
+  <section id="scanPanel" class="hidden mt-6 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800" aria-labelledby="scanTitle">
+    <div class="px-5 pt-4 pb-2 flex items-center gap-2">
+      <h2 id="scanTitle" class="font-bold">Vulnerability scan</h2>
+      <span class="text-xs text-slate-500" id="scanMeta"></span>
+    </div>
+    <div id="findings" class="divide-y divide-slate-200 dark:divide-slate-800"></div>
+  </section>
+
+  <!-- Run dashboard -->
+  <div id="dash" class="hidden mt-6 grid lg:grid-cols-[340px_1fr] gap-6">
+    <!-- Timeline -->
+    <aside class="lg:sticky lg:top-20 self-start rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-4" aria-labelledby="tlTitle">
+      <div class="flex items-center">
+        <h2 id="tlTitle" class="font-bold">Agent timeline</h2>
+        <span id="elapsed" class="ml-auto font-mono text-xs text-slate-500"></span>
+      </div>
+      <ol id="timeline" class="mt-3 space-y-1.5" aria-live="polite"></ol>
+      <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div class="text-xs font-semibold text-slate-500 mb-1">Live agent activity</div>
+        <div id="ticker" class="font-mono text-[11px] leading-5 h-40 overflow-y-auto text-slate-600 dark:text-slate-400" aria-live="off"></div>
+      </div>
+    </aside>
+
+    <div class="space-y-6 min-w-0">
+      <!-- Proof row -->
+      <section class="grid md:grid-cols-[1fr_auto] gap-4" aria-label="Proof">
+        <div class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5">
+          <div class="flex items-baseline gap-2">
+            <h2 class="font-bold">Test suite</h2>
+            <span id="testLabel" class="text-xs text-slate-500"></span>
+            <span id="testCount" class="ml-auto font-mono font-bold text-lg">–</span>
+          </div>
+          <div class="mt-3 h-5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex" role="img" id="testBarWrap" aria-label="No tests run yet">
+            <div id="barPass" class="seg h-full bg-emerald-500" style="width:0"></div>
+            <div id="barFail" class="seg h-full bg-rose-500" style="width:0"></div>
+          </div>
+          <ol id="testHistory" class="mt-3 space-y-1 text-xs"></ol>
+        </div>
+        <div id="proofBadge" class="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-5 md:w-72 flex flex-col justify-center" aria-live="polite">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Security proof</div>
+          <div class="text-lg font-bold mt-1" id="proofTitle">Not run yet</div>
+          <div class="text-xs text-slate-500 mt-1" id="proofSub">A real attack, written as a test</div>
+        </div>
+      </section>
+
+      <!-- Cost -->
+      <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="costTitle">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <h2 id="costTitle" class="font-bold">Models, tokens and cost</h2>
+          <span class="ml-auto font-mono text-2xl font-extrabold text-nv" id="costTotal" aria-live="polite">$0.0000</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="mt-3 w-full text-sm">
+            <thead class="text-xs text-slate-500 text-left"><tr><th class="py-1 pr-3 font-semibold">Model</th><th class="pr-3 font-semibold">Used for</th><th class="pr-3 text-right font-semibold">Calls</th><th class="pr-3 text-right font-semibold">Tokens in</th><th class="pr-3 text-right font-semibold">Tokens out</th><th class="text-right font-semibold">Cost</th></tr></thead>
+            <tbody id="costRows" class="font-mono"></tbody>
+          </table>
+        </div>
+        <div id="savings" class="hidden mt-3 rounded-xl bg-nv/10 border border-nv/30 p-3 text-sm"></div>
+      </section>
+
+      <!-- Reviewer summary -->
+      <section id="reviewPanel" class="hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="revTitle">
+        <h2 id="revTitle" class="font-bold">Reviewer summary</h2>
+        <div id="review" class="mt-2 text-sm space-y-2"></div>
+      </section>
+
+      <!-- Plan -->
+      <section id="planPanel" class="hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="planTitle">
+        <div class="flex items-center gap-2"><h2 id="planTitle" class="font-bold">Migration plan</h2><span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">ULTRA</span></div>
+        <div id="plan" class="mt-2 text-sm"></div>
+      </section>
+
+      <!-- Diff -->
+      <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="diffTitle">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 id="diffTitle" class="font-bold">Changes</h2>
+          <span id="diffStats" class="text-xs text-slate-500"></span>
+          <div class="ml-auto inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 text-xs" role="group" aria-label="Diff layout">
+            <button class="diffMode px-2.5 py-1 rounded-md" data-mode="side-by-side" aria-pressed="true">Split</button>
+            <button class="diffMode px-2.5 py-1 rounded-md" data-mode="line-by-line" aria-pressed="false">Unified</button>
+          </div>
+        </div>
+        <div id="explain" class="mt-3 space-y-1 text-sm"></div>
+        <div id="diff" class="mt-3 text-xs overflow-x-auto"><p class="text-sm text-slate-500">Diffs appear here as Super edits files.</p></div>
+      </section>
+
+      <!-- Sources + guardrails -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="srcTitle">
+          <div class="flex items-center gap-2"><h2 id="srcTitle" class="font-bold">Sources</h2><span class="text-xs text-slate-500" id="srcMeta"></span></div>
+          <ul id="sources" class="mt-2 space-y-2 text-sm"><li class="text-slate-500">Tavily research appears here.</li></ul>
+        </section>
+        <section class="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5" aria-labelledby="grTitle">
+          <h2 id="grTitle" class="font-bold">Guardrails and audit</h2>
+          <ul id="guard" class="mt-2 space-y-1.5 text-sm"><li class="text-slate-500">Every edit is checked: repo scope, protected files, unrelated tests, diff size, secrets.</li></ul>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="dlAudit" class="dl px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv" disabled>Audit log (JSON)</button>
+            <button id="dlReport" class="dl px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv" disabled>Report / PR body (MD)</button>
+            <button id="dlSarif" class="dl px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv" disabled>SARIF 2.1.0</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="max-w-7xl mx-auto px-4 pb-10 text-xs text-slate-500">
+  Leaply Guard · MIT · Built for the Nebius × NVIDIA Global AI Hackathon. Tests run in an isolated virtualenv; nothing is auto-merged.
+</footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ACTORS = {
+  ultra:   { label: 'Nemotron Ultra', short: 'ULTRA', cls: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300', role: 'Plan (1M ctx) · security test' },
+  super:   { label: 'Nemotron Super', short: 'SUPER', cls: 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300', role: 'Edits · fixes' },
+  nano:    { label: 'Nemotron Nano',  short: 'NANO',  cls: 'bg-lime-100 text-lime-800 dark:bg-nv/15 dark:text-nv', role: 'Reachability · triage · explanations' },
+  tavily:  { label: 'Tavily',  short: 'TAVILY', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' },
+  osv:     { label: 'OSV.dev', short: 'OSV', cls: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300' },
+  sandbox: { label: 'Sandbox', short: 'SANDBOX', cls: 'bg-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-300' },
+  system:  { label: 'Leaply', short: 'LEAPLY', cls: 'bg-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-300' },
+  github:  { label: 'GitHub', short: 'GITHUB', cls: 'bg-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-300' },
+};
+const badge = (a) => { const x = ACTORS[a] || ACTORS.system; return `<span class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${x.cls}" title="${esc(x.label)}">${x.short}</span>`; };
+const sevCls = { CRITICAL: 'bg-rose-600 text-white', HIGH: 'bg-orange-500 text-white', MODERATE: 'bg-amber-400 text-black', MEDIUM: 'bg-amber-400 text-black', LOW: 'bg-slate-400 text-black', UNKNOWN: 'bg-slate-400 text-black' };
+const reachCls = { 'REACHABLE': 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300', 'POSSIBLY REACHABLE': 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300', 'NOT USED': 'bg-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-300' };
+
+let CFG = null, S = null, diffMode = 'side-by-side', timer = null, replayAbort = null;
+
+function reset(mode) {
+  S = { mode, events: [], steps: {}, diffs: {}, finalDiff: null, expl: {}, cost: {}, report: null, sarif: null, start: Date.now(), done: false, result: null };
+  $('#dash').classList.remove('hidden');
+  $('#timeline').innerHTML = ''; $('#ticker').innerHTML = ''; $('#testHistory').innerHTML = '';
+  $('#barPass').style.width = '0'; $('#barFail').style.width = '0'; $('#testCount').textContent = '–'; $('#testLabel').textContent = '';
+  setProof('idle'); $('#costRows').innerHTML = ''; $('#costTotal').textContent = '$0.0000'; $('#savings').classList.add('hidden');
+  $('#diff').innerHTML = '<p class="text-sm text-slate-500">Diffs appear here as Super edits files.</p>'; $('#explain').innerHTML = ''; $('#diffStats').textContent = '';
+  $('#sources').innerHTML = '<li class="text-slate-500">Researching…</li>'; $('#srcMeta').textContent = '';
+  $('#guard').innerHTML = ''; $('#resultCard').classList.add('hidden'); $('#reviewPanel').classList.add('hidden'); $('#planPanel').classList.add('hidden');
+  document.querySelectorAll('.dl').forEach((b) => (b.disabled = true));
+  const mb = $('#modeBadge'); mb.classList.remove('hidden');
+  mb.className = 'ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ' + (mode === 'live' ? 'bg-rose-600 text-white' : 'bg-amber-400 text-black');
+  mb.innerHTML = mode === 'live' ? '<span class="pulse-dot">●</span> LIVE · real model calls' : '⟲ REPLAY · recorded live run';
+  clearInterval(timer); timer = setInterval(() => { if (!S.done) $('#elapsed').textContent = ((Date.now() - S.start) / 1000).toFixed(0) + 's'; }, 500);
+  renderCost();
+  $('#dash').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function tick(e, text) {
+  const t = document.createElement('div');
+  t.innerHTML = `<span class="text-slate-400">${(e.t || 0).toFixed(1).padStart(5)}s</span> ${badge(e.actor)} ${esc(text)}`;
+  const box = $('#ticker'); box.appendChild(t); box.scrollTop = box.scrollHeight;
+}
+
+function stepKey(e) { return e.step + (e.iteration ? '#' + e.iteration : ''); }
+
+function handle(e) {
+  S.events.push(e);
+  if (typeof e.cost_so_far === 'number' && e.kind !== 'model_call') $('#costTotal').textContent = '$' + e.cost_so_far.toFixed(4);
+  switch (e.kind) {
+    case 'run_start':
+      renderLimits(e.limits); tick(e, 'run started'); break;
+    case 'step_start': {
+      const li = document.createElement('li');
+      li.id = 'st-' + stepKey(e).replace('#', '-');
+      li.className = 'pop flex items-start gap-2 rounded-lg px-2 py-1.5 bg-slate-50 dark:bg-slate-800/50';
+      li.innerHTML = `<span class="mt-1 w-2 h-2 rounded-full bg-nv pulse-dot shrink-0" aria-hidden="true"></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5 flex-wrap">${badge(e.actor)}<span class="text-sm font-medium">${esc(e.title)}</span></div><div class="sum text-xs text-slate-500 truncate"></div></div><span class="dur font-mono text-[10px] text-slate-400"></span>`;
+      $('#timeline').appendChild(li); S.steps[stepKey(e)] = { t: e.t, el: li };
+      tick(e, e.title); break;
+    }
+    case 'step_end': {
+      const st = S.steps[stepKey(e)]; if (!st) break;
+      const dot = st.el.querySelector('span');
+      dot.className = 'mt-1 w-2 h-2 rounded-full shrink-0 ' + (e.status === 'ok' ? 'bg-emerald-500' : 'bg-amber-500');
+      st.el.querySelector('.sum').textContent = e.summary || '';
+      st.el.querySelector('.sum').title = e.summary || '';
+      st.el.querySelector('.dur').textContent = (e.t - st.t).toFixed(1) + 's';
+      if (e.actor && e.actor !== 'system') { const b = st.el.querySelector('.flex'); if (!b.innerHTML.includes(ACTORS[e.actor]?.short)) b.insertAdjacentHTML('afterbegin', badge(e.actor) + ' '); }
+      break;
+    }
+    case 'model_call':
+      (S.cost[e.role] ||= { calls: 0, tin: 0, tout: 0, usd: 0, purposes: new Set() });
+      Object.assign(S.cost[e.role], { calls: S.cost[e.role].calls + 1, tin: S.cost[e.role].tin + e.tokens_in, tout: S.cost[e.role].tout + e.tokens_out, usd: S.cost[e.role].usd + e.cost_usd });
+      S.cost[e.role].purposes.add(e.purpose.replace(/ \(json repair\)/, '').replace(/^(edit|fix|rewrite) .*/, '$1'));
+      $('#costTotal').textContent = '$' + Object.values(S.cost).reduce((a, c) => a + c.usd, 0).toFixed(4);
+      renderCost();
+      tick(e, `${e.purpose} · ${e.tokens_in.toLocaleString()}→${e.tokens_out.toLocaleString()} tok · ${e.latency_s}s · $${e.cost_usd.toFixed(4)}`); break;
+    case 'command': tick(e, `$ ${e.cmd.slice(0, 90)} → exit ${e.exit}`); break;
+    case 'log': tick(e, e.message); break;
+    case 'findings': renderFindings(e.findings, false); break;
+    case 'selected': tick(e, `selected ${e.package} ${e.current} → ${e.target} (${e.cve || e.advisory}, ${e.verdict})`); S.selected = e; break;
+    case 'sources': renderSources(e.sources, e.extracted); break;
+    case 'tests': renderTests(e); break;
+    case 'proof': setProof(e.status, e); break;
+    case 'plan': renderPlan(e.plan); break;
+    case 'file_changed':
+      S.diffs[e.path] = (S.diffs[e.path] || '') ; S.diffs[e.path] = e.diff; renderDiff(Object.values(S.diffs).join(''));
+      tick(e, `edited ${e.path} (+${e.added} −${e.removed}${e.how === 'deterministic' ? ', deterministic' : ''})`); break;
+    case 'guardrail':
+      $('#guard').insertAdjacentHTML('beforeend', `<li class="flex gap-2"><span class="text-amber-500" aria-hidden="true">⛔</span><span><b>Rejected:</b> ${esc(e.reason)}</span></li>`);
+      tick(e, 'guardrail rejected: ' + e.reason); break;
+    case 'triage_failure': tick(e, `failure triage [${e.category}] ${e.root_cause}`); break;
+    case 'handover': tick(e, 'HANDOVER to a human: ' + e.reason); break;
+    case 'rescan': tick(e, `re-scan ${e.package} ${e.version}: ${e.remaining.length} known vulnerabilities`); break;
+    case 'explanations': S.expl = e.files || {}; renderExplain(); renderReview(e.reviewer_summary); break;
+    case 'report': S.report = e.markdown; S.sarif = e.sarif; break;
+    case 'cost': renderSavings(e); break;
+    case 'delivery': tick(e, e.pr_url ? 'pull request opened: ' + e.pr_url : (e.note || 'report written')); S.delivery = e; break;
+    case 'error': tick(e, 'ERROR: ' + e.message); break;
+    case 'finished': finish(e); break;
+  }
+}
+
+function renderLimits(l) {
+  if (!l) return;
+  $('#limits').innerHTML = `<span>Max fix iterations: <b>${l.max_iterations}</b></span><span>Hand over after same error ×<b>${l.same_error_limit}</b></span><span>Max diff: <b>${l.max_diff_lines}</b> lines</span><span>Agent may not touch: <b>.env, CI, lockfiles, unrelated tests</b></span>`;
+}
+
+function renderFindings(findings, actionable) {
+  $('#scanPanel').classList.remove('hidden');
+  $('#scanMeta').textContent = `${findings.length} vulnerable package(s), ${findings.reduce((a, f) => a + f.advisories.length, 0)} advisories · sorted by severity × reachability`;
+  $('#findings').innerHTML = findings.map((f, i) => {
+    const r = f.reachability || {}; const top = f.advisories[0] || {};
+    const cves = f.advisories.slice(0, 6).map((a) => `<a class="underline decoration-dotted hover:text-nv" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.cve || a.id)}</a> <span class="text-[10px] px-1 rounded ${sevCls[a.severity] || ''}">${esc(a.severity)}</span>`).join(' · ');
+    const ev = (r.evidence || []).slice(0, 5).map((x) => `<li><code class="text-xs">${esc(x.file)}:${x.line}</code> <span class="text-slate-500">${esc(x.why)}</span></li>`).join('');
+    return `<div class="px-5 py-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="font-mono font-bold">${esc(f.package.name)} ${esc(f.package.version)}</span>
+        <span class="text-xs px-2 py-0.5 rounded font-bold ${sevCls[f.severity] || ''}">${esc(f.severity)}</span>
+        <span class="text-xs px-2 py-0.5 rounded font-bold ${reachCls[r.verdict] || ''}">${esc(r.verdict || '?')}</span>
+        ${r.by === 'nano' ? badge('nano') : '<span class="text-[10px] text-slate-500">static</span>'}
+        <span class="text-xs text-slate-500">fixed in ${esc(f.fixed_version || '?')} · latest ${esc(f.latest_version || '?')} · <code>${esc(f.package.file)}:${f.package.line}</code></span>
+        ${actionable ? `<button class="fixBtn ml-auto px-4 py-1.5 rounded-lg bg-nv hover:bg-nv-dark text-black font-bold text-sm" data-pkg="${esc(f.package.name)}" ${CFG.live_enabled ? '' : 'disabled title="Live runs need NEBIUS_API_KEY"'}>Fix ${esc(f.package.name)}</button>` : ''}
+      </div>
+      <div class="mt-2 text-sm">${cves}${f.advisories.length > 6 ? ` <span class="text-slate-500">+${f.advisories.length - 6} more</span>` : ''}</div>
+      <details class="mt-2 text-sm" ${i === 0 ? 'open' : ''}><summary class="cursor-pointer text-slate-500">Why ${esc(r.verdict || '')}? (${r.usage_count || 0} usages)</summary>
+        <p class="mt-1">${esc(r.reasoning || '')}</p><ul class="mt-1 space-y-0.5">${ev}</ul></details>
+    </div>`;
+  }).join('') || '<p class="px-5 py-4 text-sm text-slate-500">No known vulnerabilities in pinned dependencies.</p>';
+  document.querySelectorAll('.fixBtn').forEach((b) => b.addEventListener('click', () => startLive(b.dataset.pkg)));
+}
+
+function renderSources(src, extracted) {
+  const ex = new Set(extracted || []);
+  $('#srcMeta').textContent = `${src.length} sources · ${ex.size} pages extracted`;
+  $('#sources').innerHTML = src.slice(0, 12).map((s) => `<li class="flex gap-2 items-start">${badge(s.via === 'tavily' ? 'tavily' : 'osv')}<div class="min-w-0"><a href="${esc(s.url)}" target="_blank" rel="noopener" class="font-medium hover:text-nv break-words">${esc(s.title.slice(0, 120))}</a>${ex.has(s.url) ? ' <span class="text-[10px] text-nv font-bold">EXTRACTED</span>' : ''}<div class="text-xs text-slate-500 truncate">${esc(new URL(s.url).hostname)}</div></div></li>`).join('');
+}
+
+function renderTests(e) {
+  const total = Math.max(e.total, 1);
+  $('#barPass').style.width = (100 * e.passed / total) + '%';
+  $('#barFail').style.width = (100 * (e.failed + e.errors) / total) + '%';
+  $('#testCount').textContent = `${e.passed}/${e.total}`;
+  $('#testCount').className = 'ml-auto font-mono font-bold text-lg ' + (e.ok ? 'text-emerald-500' : 'text-rose-500');
+  $('#testLabel').textContent = e.label;
+  $('#testBarWrap').setAttribute('aria-label', `${e.passed} of ${e.total} tests passing (${e.label})`);
+  const name = { baseline: 'Before (vulnerable)', bump: 'After bump, code unchanged', verify: 'After Leaply Guard' }[e.step] || e.step;
+  $('#testHistory').insertAdjacentHTML('beforeend', `<li class="pop flex items-center gap-2"><span class="w-44 shrink-0 text-slate-500">${esc(name)}${e.iteration ? ' #' + e.iteration : ''}</span><span class="flex-1 h-2 rounded-full overflow-hidden flex bg-slate-200 dark:bg-slate-800"><span class="h-full bg-emerald-500" style="width:${100 * e.passed / total}%"></span><span class="h-full bg-rose-500" style="width:${100 * (e.failed + e.errors) / total}%"></span></span><span class="font-mono w-12 text-right ${e.ok ? 'text-emerald-500' : 'text-rose-500'}">${e.passed}/${e.total}</span></li>`);
+  tick(e, `tests [${e.label}]: ${e.passed}/${e.total} passing`);
+}
+
+function setProof(status, e) {
+  const b = $('#proofBadge'), t = $('#proofTitle'), s = $('#proofSub');
+  const base = 'rounded-2xl border-2 p-5 md:w-72 flex flex-col justify-center pop ';
+  if (status === 'idle') { b.className = base + 'border-dashed border-slate-300 dark:border-slate-700'; t.textContent = 'Not run yet'; s.textContent = 'A real attack, written as a test'; return; }
+  if (e && e.phase === 'before' && status === 'failed') {
+    b.className = base + 'border-rose-500 bg-rose-50 dark:bg-rose-500/10'; t.innerHTML = '<span class="text-rose-600 dark:text-rose-400">✗ Attack ACCEPTED</span>';
+    s.innerHTML = `Forged token passes on the vulnerable version. Test written by ${e.source === 'ultra' ? 'Nemotron Ultra' : 'a vetted template'}.`;
+    tick(e, 'security proof: attack accepted on vulnerable version (red)'); return;
+  }
+  if (status === 'passed') {
+    b.className = base + 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'; t.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400">✓ Attack REJECTED</span>';
+    s.textContent = 'The same forged token is now refused.'; tick(e, 'security proof: attack rejected (green)'); return;
+  }
+  if (status === 'unavailable') { b.className = base + 'border-slate-400'; t.textContent = 'No proof available'; s.textContent = e?.message || ''; return; }
+  b.className = base + 'border-amber-500'; t.innerHTML = `<span class="text-amber-500">Still failing</span>`; s.textContent = 'The fix loop continues.';
+}
+
+function renderPlan(p) {
+  $('#planPanel').classList.remove('hidden');
+  $('#plan').innerHTML = `<p>${esc(p.summary)}</p>
+    <ul class="mt-2 space-y-1.5">${(p.files || []).map((f) => `<li class="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2"><code class="font-semibold">${esc(f.path)}</code> <span class="text-[10px] font-bold px-1.5 rounded ${f.risk === 'high' ? 'bg-rose-500 text-white' : f.risk === 'medium' ? 'bg-amber-400 text-black' : 'bg-emerald-500 text-white'}">${esc(f.risk || 'low')} risk</span><div class="text-xs text-slate-500 mt-0.5">${esc((f.changes || []).join(' · '))}</div></li>`).join('')}</ul>
+    ${p.security_notes ? `<p class="mt-2 text-xs"><b>Security:</b> ${esc(p.security_notes)}</p>` : ''}`;
+}
+
+function renderDiff(text) {
+  if (!text) return;
+  const el = $('#diff');
+  const files = (text.match(/^\+\+\+ /gm) || []).length;
+  const add = (text.match(/^\+(?!\+\+)/gm) || []).length, rem = (text.match(/^-(?!--)/gm) || []).length;
+  $('#diffStats').textContent = `${files} files · +${add} −${rem}`;
+  try {
+    const ui = new Diff2HtmlUI(el, text, { drawFileList: false, matching: 'lines', outputFormat: diffMode, highlight: true, synchronisedScroll: true, fileContentToggle: false });
+    ui.draw(); ui.highlightCode();
+  } catch (err) { el.innerHTML = `<pre class="font-mono whitespace-pre overflow-x-auto">${esc(text)}</pre>`; }
+  S.lastDiff = text;
+}
+
+function renderExplain() {
+  $('#explain').innerHTML = Object.entries(S.expl).map(([p, why]) => `<div class="flex gap-2 items-start">${badge('nano')}<span><code class="font-semibold">${esc(p)}</code> — ${esc(why)}</span></div>`).join('');
+}
+
+function renderReview(r) {
+  if (!r) return;
+  $('#reviewPanel').classList.remove('hidden');
+  $('#review').innerHTML = `<p><b>What changed:</b> ${esc(r.what_changed)}</p><p><b>Risk:</b> ${esc(r.risk)}</p>${(r.double_check || []).length ? `<div><b>Double-check:</b><ul class="list-disc pl-5">${r.double_check.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+function renderCost() {
+  const roles = ['ultra', 'super', 'nano'];
+  $('#costRows').innerHTML = roles.map((r) => { const c = S?.cost[r] || { calls: 0, tin: 0, tout: 0, usd: 0, purposes: new Set() };
+    return `<tr class="border-t border-slate-200 dark:border-slate-800"><td class="py-1.5 pr-3 font-sans">${badge(r)} <span class="text-xs text-slate-500 hidden sm:inline">${esc(CFG?.models?.[r] || '')}</span></td><td class="pr-3 font-sans text-xs text-slate-500">${esc([...c.purposes].join(', ') || ACTORS[r].role)}</td><td class="pr-3 text-right">${c.calls}</td><td class="pr-3 text-right">${c.tin.toLocaleString()}</td><td class="pr-3 text-right">${c.tout.toLocaleString()}</td><td class="text-right">$${c.usd.toFixed(4)}</td></tr>`; }).join('');
+}
+
+function renderSavings(c) {
+  const el = $('#savings'); el.classList.remove('hidden');
+  el.innerHTML = `<b class="text-nv">${c.routing_savings_pct.toFixed(0)}% saved by model routing.</b> This run cost <b>$${c.total_cost_usd.toFixed(4)}</b>; the same calls on Ultra alone would cost <b>$${c.all_ultra_cost_usd.toFixed(4)}</b> (${c.total_tokens.toLocaleString()} tokens).`;
+  $('#costTotal').textContent = '$' + c.total_cost_usd.toFixed(4);
+}
+
+function finish(e) {
+  S.done = true; S.result = e.result || {}; clearInterval(timer);
+  $('#elapsed').textContent = (e.t || 0).toFixed(0) + 's';
+  const r = S.result;
+  if (r.diff) renderDiff(Object.values(r.diff).join(''));
+  const g = r.guardrails;
+  if (g) $('#guard').insertAdjacentHTML('afterbegin', `<li class="flex gap-2"><span aria-hidden="true">${g.status === 'passed' ? '✅' : '❌'}</span><span><b>Guardrails: ${esc(g.status)}</b> · ${g.checks} checks · ${g.rejected_edits.length} edits rejected and retried · secret scan ${g.secrets_found.length ? 'FOUND ' + g.secrets_found.length : 'clean'}</span></li>`);
+  const conf = r.confidence;
+  if (conf) $('#guard').insertAdjacentHTML('beforeend', `<li class="flex gap-2"><span aria-hidden="true">🎯</span><span><b>Confidence ${conf.score}/100 (${esc(conf.level)})</b><span class="block text-xs text-slate-500">${esc(conf.reasons.join(' · '))}</span></span></li>`);
+  if (r.rescan) $('#guard').insertAdjacentHTML('beforeend', `<li class="flex gap-2"><span aria-hidden="true">🔎</span><span><b>Re-scan:</b> ${r.rescan.remaining.length} known vulnerabilities for ${esc(r.rescan.package)} ${esc(r.rescan.version)} (OSV)${r.rescan.pip_audit?.ran ? ` · pip-audit: ${r.rescan.pip_audit.vulnerabilities}` : ''}</span></li>`);
+  document.querySelectorAll('.dl').forEach((b) => (b.disabled = false));
+  if (!S.report) $('#dlReport').disabled = true;
+  if (!S.sarif) $('#dlSarif').disabled = true;
+  renderResult(e.status, r);
+  tick(e, 'finished: ' + e.status);
+}
+
+function resultMarkdown(r) {
+  const cve = r.proof?.cve || r.finding?.advisories?.[0]?.cve || '';
+  const a = r.tests_after || {}, c = r.cost || {};
+  return `**${cve} closed** · ${a.passed}/${a.total} tests passing · security proof ${r.proof?.after === 'passed' ? 'passing' : r.proof?.after} · ${r.iterations} iteration(s) · $${(c.total_cost_usd || 0).toFixed(4)} · ${(c.routing_savings_pct || 0).toFixed(0)}% saved by routing — Leaply Guard (Nemotron 3 on Nebius Token Factory)`;
+}
+
+function renderResult(status, r) {
+  const el = $('#resultCard'); el.classList.remove('hidden');
+  if (status === 'failed') { el.className = 'mt-6 rounded-2xl p-5 border-2 border-rose-500 pop'; el.innerHTML = `<b>Run failed:</b> ${esc(r.error || '')}`; return; }
+  if (!r.finding) { el.className = 'mt-6 rounded-2xl p-5 border-2 border-emerald-500 pop'; el.innerHTML = esc(r.summary || 'Nothing to fix.'); return; }
+  const ok = status === 'success';
+  const a = r.tests_after || {}, c = r.cost || {}, cve = r.proof?.cve || r.finding.advisories[0]?.cve || r.finding.advisories[0]?.id;
+  const stat = (big, small, cls = '') => `<div class="rounded-xl bg-white/70 dark:bg-slate-900/70 px-4 py-3"><div class="text-2xl font-extrabold ${cls}">${big}</div><div class="text-xs text-slate-500">${small}</div></div>`;
+  el.className = 'mt-6 rounded-2xl p-5 border-2 pop ' + (ok ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/5' : 'border-amber-500 bg-amber-50/60 dark:bg-amber-500/5');
+  el.innerHTML = `<div class="flex flex-wrap items-center gap-3">
+      <div class="text-xl font-extrabold">${ok ? '✅ ' + esc(cve) + ' closed' : '⚠ Needs human review'}</div>
+      <span class="text-sm text-slate-500">${esc(r.finding.package.name)} ${esc(r.finding.package.version)} → ${esc(r.target)}</span>
+      <button id="copyMd" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:border-nv">Copy as markdown</button>
+    </div>
+    ${!ok && r.handover ? `<p class="mt-2 text-sm"><b>${esc(r.handover.reason)}.</b> ${esc(r.handover.error || '')}<br>${(r.handover.tried || []).map(esc).join('<br>')}</p>` : ''}
+    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      ${stat(`${a.passed}/${a.total}`, 'tests passing', a.ok ? 'text-emerald-500' : 'text-rose-500')}
+      ${stat(r.proof?.after === 'passed' ? '✓' : '✗', 'security proof', r.proof?.after === 'passed' ? 'text-emerald-500' : 'text-rose-500')}
+      ${stat(r.iterations ?? '–', 'fix iterations')}
+      ${stat('$' + (c.total_cost_usd || 0).toFixed(3), 'total model cost')}
+      ${stat((c.routing_savings_pct || 0).toFixed(0) + '%', 'saved by routing', 'text-nv')}
+      ${stat((r.confidence?.score ?? '–') + '', 'confidence / 100')}
+    </div>
+    ${S.delivery?.pr_url ? `<p class="mt-3 text-sm">Pull request: <a class="underline text-nv" href="${esc(S.delivery.pr_url)}" target="_blank" rel="noopener">${esc(S.delivery.pr_url)}</a></p>` : `<p class="mt-3 text-xs text-slate-500">${esc(S.delivery?.note || '')}</p>`}`;
+  $('#copyMd').addEventListener('click', async () => { try { await navigator.clipboard.writeText(resultMarkdown(r)); $('#copyMd').textContent = 'Copied ✓'; } catch { prompt('Copy:', resultMarkdown(r)); } });
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function download(name, content, type) {
+  const url = URL.createObjectURL(new Blob([content], { type })); const a = document.createElement('a');
+  a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('#dlAudit').addEventListener('click', () => download(`leaply-audit-${S.events[0]?.run_id}.json`, JSON.stringify({
+  run_id: S.events[0]?.run_id, mode: S.mode,
+  model_calls: S.events.filter((e) => e.kind === 'model_call').map(({ role, model, purpose, step, tokens_in, tokens_out, cost_usd, latency_s }) => ({ role, model, purpose, step, tokens_in, tokens_out, cost_usd, latency_s })),
+  commands: S.events.filter((e) => e.kind === 'command').map(({ cmd, exit, seconds, step }) => ({ cmd, exit, seconds, step })),
+  files_changed: S.events.filter((e) => e.kind === 'file_changed').map(({ path, added, removed, how, step }) => ({ path, added, removed, how, step })),
+  guardrails: S.events.filter((e) => e.kind === 'guardrail').map(({ path, reason }) => ({ path, reason })),
+  events: S.events.length,
+}, null, 2), 'application/json'));
+$('#dlReport').addEventListener('click', () => S.report && download('leaply-report.md', S.report, 'text/markdown'));
+$('#dlSarif').addEventListener('click', () => S.sarif && download('leaply-guard.sarif', JSON.stringify(S.sarif, null, 2), 'application/json'));
+
+document.querySelectorAll('.diffMode').forEach((b) => b.addEventListener('click', () => {
+  diffMode = b.dataset.mode;
+  document.querySelectorAll('.diffMode').forEach((x) => { const on = x === b; x.setAttribute('aria-pressed', on); x.className = 'diffMode px-2.5 py-1 rounded-md ' + (on ? 'bg-white dark:bg-slate-700 shadow' : ''); });
+  if (S?.lastDiff) renderDiff(S.lastDiff);
+}));
+document.querySelector('.diffMode').click();
+
+// --- live, replay, scan ------------------------------------------------------
+async function startLive(pkg) {
+  if (replayAbort) replayAbort.abort = true;
+  const body = { preset: $('#preset').value, repo: CFG.hosted ? null : ($('#repo').value.trim() || null), package: pkg || null };
+  $('#liveBtn').disabled = true;
+  try {
+    const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.statusText);
+    reset('live');
+    const es = new EventSource(`/api/runs/${j.run_id}/events`);
+    es.onmessage = (m) => { try { handle(JSON.parse(m.data)); } catch (err) { console.error(err); } };
+    es.addEventListener('end', () => { es.close(); $('#liveBtn').disabled = !CFG.live_enabled; });
+    es.onerror = () => { if (S.done) es.close(); };
+  } catch (err) {
+    alert(err.message); $('#liveBtn').disabled = !CFG.live_enabled;
+  }
+}
+
+async function startReplay(name, speedArg) {
+  const r = await fetch(`/api/replays/${encodeURIComponent(name)}`);
+  if (!r.ok) { alert('Replay not found'); return; }
+  const data = await r.json();
+  if (replayAbort) replayAbort.abort = true;
+  const token = (replayAbort = { abort: false });
+  reset('replay');
+  const instant = speedArg === 'max'; const speed = Number(speedArg) || 6; let prev = 0;
+  for (const e of data.events) {
+    if (token.abort) return;
+    const gap = Math.min(Math.max((e.t - prev) / speed, 0), 1.2) * 1000;
+    prev = e.t;
+    if (!instant && gap > 15) await new Promise((res) => setTimeout(res, gap));
+    try { handle(e); } catch (err) { console.error('event', e.kind, err); }
+  }
+}
+
+$('#liveBtn').addEventListener('click', () => startLive(null));
+$('#replayBtn').addEventListener('click', () => CFG.replays.length && startReplay(CFG.replays[0].name));
+$('#scanBtn').addEventListener('click', async () => {
+  const btn = $('#scanBtn'); btn.disabled = true; btn.textContent = 'Scanning…';
+  try {
+    const r = await fetch('/api/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: $('#preset').value, repo: CFG.hosted ? null : ($('#repo').value.trim() || null) }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText);
+    renderFindings(j.findings, true);
+    $('#scanPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) { alert(err.message); } finally { btn.disabled = false; btn.textContent = 'Scan'; }
+});
+
+// --- theme ---------------------------------------------------------------------
+function applyTheme(t) { document.documentElement.classList.toggle('dark', t === 'dark'); try { localStorage.setItem('lg-theme', t); } catch {} }
+let saved = null; try { saved = localStorage.getItem('lg-theme'); } catch {}
+applyTheme(saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+$('#themeBtn').addEventListener('click', () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
+
+// --- boot ------------------------------------------------------------------------
+(async () => {
+  CFG = await (await fetch('/api/config')).json();
+  $('#preset').innerHTML = CFG.presets.map((p) => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('');
+  if (CFG.hosted) { $('#repo').disabled = true; $('#repo').placeholder = 'Hosted demo: bundled demo repo only'; }
+  renderLimits(CFG.limits);
+  $('#liveBtn').disabled = !CFG.live_enabled;
+  $('#replayBtn').disabled = !CFG.replays.length;
+  const hints = [];
+  if (!CFG.live_enabled) hints.push('Live runs are off on this server (no Nebius key).');
+  else if (CFG.hosted) hints.push(`Live runs use real Nemotron calls (${CFG.limits.live_runs_per_hour}/hour per visitor).`);
+  if (CFG.replays.length) hints.push('The recorded run replays a real live run at 6× speed.');
+  $('#liveHint').textContent = hints.join(' ');
+  S = { cost: {} }; renderCost();
+  const q = new URLSearchParams(location.search);
+  if (q.get('replay') && CFG.replays.length) startReplay(q.get('replay') === '1' ? CFG.replays[0].name : q.get('replay'), q.get('speed'));
+})();
+</script>
+</body>
+</html>

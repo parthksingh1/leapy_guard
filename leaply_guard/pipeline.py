@@ -322,9 +322,9 @@ class Pipeline:
         self.result.status = "success" if success else "needs_review"
         data["status"] = self.result.status
 
-        from .report import build_report, deliver
+        from .report import build_report, deliver, sarif
         data["report_md"] = build_report(data, self.run_id)
-        bus.emit("report", step="report", markdown=data["report_md"])
+        bus.emit("report", step="report", markdown=data["report_md"], sarif=sarif(data))
         delivery = deliver(self, data, src, gh_repo)
         data["delivery"] = delivery
         bus.emit("delivery", step="pr", actor="github", **delivery)
