@@ -51,3 +51,8 @@ def test_routing_savings():
     s = led.summary(models)
     assert s["all_ultra_cost_usd"] > s["total_cost_usd"]
     assert 0 < s["routing_savings_pct"] < 100
+
+
+def test_security_proof_is_not_editable_by_agents():
+    from leaply_guard.pipeline import PROOF_PATH, check_path_quiet
+    assert check_path_quiet(PROOF_PATH)

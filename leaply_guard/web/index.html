@@ -265,7 +265,8 @@ function reset(mode) {
   document.querySelectorAll('.dl').forEach((b) => (b.disabled = true));
   const mb = $('#modeBadge'); mb.classList.remove('hidden');
   mb.className = 'ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ' + (mode === 'live' ? 'bg-rose-600 text-white' : 'bg-amber-400 text-black');
-  mb.innerHTML = mode === 'live' ? '<span class="pulse-dot">●</span> LIVE · real model calls' : '⟲ REPLAY · recorded live run';
+  mb.innerHTML = mode === 'live' ? '<span class="pulse-dot">●</span> LIVE · real model calls' : '⟲ REPLAY · recorded live run <button id="skipBtn" class="ml-1 underline font-bold" aria-label="Skip to the result of the replay">skip ⏭</button>';
+  if (mode === 'replay') $('#skipBtn').addEventListener('click', () => { if (replayAbort) replayAbort.skip = true; });
   clearInterval(timer); timer = setInterval(() => { if (!S.done) $('#elapsed').textContent = ((Date.now() - S.start) / 1000).toFixed(0) + 's'; }, 500);
   renderCost();
   $('#dash').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -546,7 +547,7 @@ async function startReplay(name, speedArg) {
     if (token.abort) return;
     const gap = Math.min(Math.max((e.t - prev) / speed, 0), 1.2) * 1000;
     prev = e.t;
-    if (!instant && gap > 15) await new Promise((res) => setTimeout(res, gap));
+    if (!instant && !token.skip && gap > 15) await new Promise((res) => setTimeout(res, gap));
     try { handle(e); } catch (err) { console.error('event', e.kind, err); }
   }
 }

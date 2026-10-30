@@ -201,13 +201,15 @@ class LLM:
                 t_out = getattr(usage, "completion_tokens", 0) or 0
                 msg = resp.choices[0].message
                 text = msg.content or ""
-                if not strip_reasoning(text) and resp.choices[0].finish_reason == "length":
-                    max_tokens = min(max_tokens * 2, 32768)
-                    raise LLMError("answer truncated during reasoning; retrying with a larger budget")
-                rec = self.ledger.add(spec, purpose, t_in, t_out, latency, step)
+                truncated = not strip_reasoning(text) and resp.choices[0].finish_reason == "length"
+                # truncated answers are billed too, so they are recorded before retrying
+                rec = self.ledger.add(spec, purpose + (" (truncated)" if truncated else ""), t_in, t_out, latency, step)
                 if self.bus:
                     self.bus.cost_usd = self.ledger.total_cost
                     self.bus.emit("model_call", actor=role, **rec)
+                if truncated:
+                    max_tokens = min(max_tokens * 2, 32768)
+                    raise LLMError("answer truncated during reasoning; retrying with a larger budget")
                 return text
             except Exception as exc:  # noqa: BLE001 - openai raises many types
                 last_exc = exc

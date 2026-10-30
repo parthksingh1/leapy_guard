@@ -104,7 +104,8 @@ class Pipeline:
         self.llm = llm or LLM(self.bus, self.cfg)
         self.llm.bus = self.bus
         self.max_iter = opts.max_iterations or self.cfg.max_iterations
-        self.guard = Guardrails(opts.max_diff_lines or self.cfg.max_diff_lines, {PROOF_PATH})
+        # no test file is editable by an agent, including the security proof (it must not be "fixed" to pass)
+        self.guard = Guardrails(opts.max_diff_lines or self.cfg.max_diff_lines, set())
         self.result = RunResult(self.run_id)
         self.files_changed: dict[str, str] = {}  # path -> original content
         self.ws: Workspace | None = None
@@ -288,7 +289,7 @@ class Pipeline:
             instructions = "\n".join(item.get("changes", []))
             d = agents.edit_file(self.llm, path, ws.read(path), item, plan, finding, target)
             self.apply_agent_diff(path, d, "edit", instructions)
-        self.done("edit", actor="super", summary=f"{len(self.files_changed) - 1} source files changed")
+        self.done("edit", actor="super", summary=f"{len(self._agent_files())} source files changed")
 
         # 9. VERIFY + FIX LOOP ----------------------------------------------------------------
         result = self._verify_and_fix(finding, target)
@@ -308,7 +309,7 @@ class Pipeline:
         # 11. EXPLAIN + REPORT ---------------------------------------------------------------------
         diffs = self.current_diff()
         data["diff"] = diffs
-        total_lines = sum(sum(diff_stats(d)) for d in diffs.values())
+        total_lines = sum(sum(diff_stats(d)) for p, d in diffs.items() if p != PROOF_PATH)
         self.guard.check_size(total_lines)
         secrets = scan_secrets("\n".join(diffs.values()))
         data["guardrails"] = self.guard.summary(secrets)
@@ -355,6 +356,7 @@ class Pipeline:
             status = _proof_status(res)
             if _proof_is_valid_red(res):
                 proof.update(source=source, before="failed", code=code)
+                self.files_changed[PROOF_PATH] = ""  # new file: shipped in the PR as a regression test
                 bus.emit("proof", step="proof", actor=source if source == "ultra" else "system", phase="before",
                          status="failed", source=source, code=code,
                          message=f"Attack accepted by {finding.package.name} {finding.package.version}: the test fails, as expected on vulnerable code")
@@ -391,7 +393,7 @@ class Pipeline:
             try:
                 tri = agents.triage_failure(self.llm, failures, editable, "fix")
             except LLMError as exc:
-                tri = {"category": "other", "root_cause": str(exc), "files": list(self.files_changed)[1:], "signature": failures[:120]}
+                tri = {"category": "other", "root_cause": str(exc), "files": self._agent_files(), "signature": failures[:120]}
             sig = re.sub(r"0x[0-9a-f]+|\d+", "#", str(tri.get("signature") or failures[:160]))[:160]
             signatures[sig] = signatures.get(sig, 0) + 1
             bus.emit("triage_failure", step="fix", actor="nano", iteration=iteration, **tri, repeats=signatures[sig])
@@ -400,7 +402,7 @@ class Pipeline:
                 self.result.data["handover"] = {"reason": f"same error repeated {signatures[sig]} times", "error": tri.get("root_cause"), "tried": tried}
                 self.done("fix", actor="nano", status="handover")
                 return res
-            targets = [p for p in tri.get("files", []) if p in editable] or list(self.files_changed)[1:]
+            targets = [p for p in tri.get("files", []) if p in editable] or self._agent_files()
             for path in targets[:4]:
                 d = agents.fix_file(self.llm, path, ws.read(path), failures, tri, finding, target, "fix")
                 if self.apply_agent_diff(path, d, "fix", f"Fix so the tests pass: {tri.get('root_cause')}"):
@@ -411,6 +413,10 @@ class Pipeline:
                                                      "error": res.failures_text(400), "tried": tried})
             bus.emit("handover", step="fix", reason=self.result.data["handover"]["reason"], tried=tried)
         return res
+
+    def _agent_files(self) -> list[str]:
+        dep = (self.result.data.get("finding") or {}).get("package", {}).get("file")
+        return [p for p in self.files_changed if p not in (dep, PROOF_PATH)]
 
     def _source_files(self) -> list[str]:
         out = []
@@ -423,7 +429,7 @@ class Pipeline:
 
 def check_path_quiet(path: str) -> str | None:
     from .guardrails import check_path
-    return check_path(path, {PROOF_PATH})
+    return check_path(path, set())
 
 
 def _pip_audit(ws: Workspace) -> dict:
@@ -459,7 +465,7 @@ def confidence(data: dict, max_iter: int) -> dict:
     pts = max(0, 15 - 3 * (it - 1))
     score += pts
     reasons.append(f"{it} test iteration(s) (+{pts})")
-    lines = sum(sum(diff_stats(d)) for d in data.get("diff", {}).values())
+    lines = sum(sum(diff_stats(d)) for p, d in data.get("diff", {}).items() if p != PROOF_PATH)
     pts = 10 if lines <= 40 else 5 if lines <= 150 else 0
     score += pts
     reasons.append(f"{lines} changed lines (+{pts})")
