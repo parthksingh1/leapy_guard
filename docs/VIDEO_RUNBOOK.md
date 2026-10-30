@@ -50,7 +50,7 @@ Recording tip: use the **recorded live run** (it is the real run, replayed at 6�
 ## 2:40 – 2:55 · Impact
 **Screen:** terminal: `leaply-guard scan --fail-on reachable-high` (pre-typed), then the MCP section of the README.
 **Say:**
-> "It runs as a CLI, a web app, an MCP server in Claude Code or Cursor, and a weekly GitHub Action that opens PRs for reachable criticals. Leaply Guard: security upgrades that prove themselves."
+> "It runs as a CLI, a web app, an MCP server in Cursor or any MCP client, and a weekly GitHub Action that opens PRs for reachable criticals. Leaply Guard: security upgrades that prove themselves."
 
 ---
 

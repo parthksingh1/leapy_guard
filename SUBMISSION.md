@@ -92,4 +92,4 @@ Routing keeps a fix at an estimated ~$0.08 in model costs, ~43% less than runnin
 "Three Nemotron 3 models on Nebius Token Factory. **Ultra**, with 1M context, plans with the whole repo and writes the attack test, once per fix. **Super** makes the edits and fixes, many small calls. **Nano** does reachability, failure triage and explanations, cheap and fast. Tavily researches at runtime, OSV supplies the vulnerability data, and tests run in an isolated venv. Every edit passes guardrails, every call is in an audit log, and when the loop can't fix something, it hands over to a human instead of pretending."
 
 **2:40–3:00 · Impact and what's next**
-"It runs as a CLI, a web app, an MCP server in Claude Code or Cursor, and a weekly GitHub Action that opens PRs for reachable criticals. Next: lockfiles, JavaScript, and Nebius Serverless sandboxes. Leaply Guard: security upgrades that prove themselves."
+"It runs as a CLI, a web app, an MCP server in Cursor or any MCP client, and a weekly GitHub Action that opens PRs for reachable criticals. Next: lockfiles, JavaScript, and Nebius Serverless sandboxes. Leaply Guard: security upgrades that prove themselves."

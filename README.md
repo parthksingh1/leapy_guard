@@ -209,14 +209,9 @@ The cost estimate comes from Leaply Guard's own pre-run estimator (repo size × 
 
 Use Leaply Guard from any MCP client. Tools: `scan_repo(path)`, `triage(finding_id)`, `fix(finding_id, target_version?)`, `get_report(run_id)`.
 
-**Claude Code**
+The server speaks MCP over stdio (`leaply-guard mcp`, or `python -m leaply_guard mcp` without installing).
 
-```bash
-claude mcp add leaply-guard -- leaply-guard mcp
-# or, without installing: claude mcp add leaply-guard -- python -m leaply_guard mcp
-```
-
-**Cursor** (`~/.cursor/mcp.json`) and **Hermes Agent** (its MCP servers config) use the same stdio entry:
+**Cursor** (`~/.cursor/mcp.json`), **Hermes Agent** (its MCP servers config) and any other MCP client use the same stdio entry:
 
 ```json
 {
